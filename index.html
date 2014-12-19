@@ -27,6 +27,7 @@ License URL: http://creativecommons.org/licenses/by/3.0/
 <script language="javascript" type="text/javascript" src="js/spin.js"></script>
 <!--Index JS-->
 <script language="javascript" type="text/javascript" src="js/index.js"></script>
+<script src="data/Chart.js"></script>
 </head>
 <body>
 	<!-- Header part Starts Here -->
@@ -41,18 +42,29 @@ License URL: http://creativecommons.org/licenses/by/3.0/
 					  <li><a href="#portfolio" class="scroll">About</a></li>								
 					 </ul>
 				</div>	
-			<div id='spinner'></div>
+			
 		</div>
 		
-			<form  class="search-bar cf">
-				<input type="text" placeholder="Search Athlete or Team..." required>
+			<div  class="search-bar cf">
+				<input type="text" autocomplete="off" id="search-stats" placeholder="Search Athlete, Team or Event...">
 					<button type="button" id="search-button">Search</button>
-			</form>
+			</div>
+	
 	</div>
 	<!-- Header part Ends Here -->
+
+			<div id="search-container">
+				
+			</div>
+			<div id="chart-container">
+			
+			</div>
+			
+		<img id='invisible' src="desktop-views/images/rockstatlogo.png" />
+		<div id='spinner'></div>
 	<!-- Footer Starts Here -->
 	<div class="footer" id="footer">
-		<div class="container">
+		<div class="footer-container">
 			<a href="index.html"><img src="desktop-views/images/rockstatlogo.png" /></a>
 			<p class="copyright">2014 &copy; Website By Brad Thiessen Development</p>
 		</div>

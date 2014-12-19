@@ -29,8 +29,13 @@ nav.horizontal ul li{	display: inline-block;}/* horizontal menu */
 img{max-width:100%;}
 /*end reset*/
 /*--Header Starts Here-- */
+
+#w3-masthead a {
+font-family: 'Droid Sans', sans-serif;
+color: white;
+}
 body {
-	background:#e74c3c;
+	background:#eff4ff;
 	width: 100%;
 }
 .header{
@@ -39,7 +44,19 @@ body {
 }
 #w3-masthead {
 	padding: 0 10px;
-	background: #66CCFF;
+	background: #00aba9;
+	height: 15em;
+	text-align: center;
+}
+
+.helper {
+    display: inline-block;
+    height: 100%;
+    vertical-align: middle;
+}
+
+#w3-masthead img {
+	vertical-align: middle;
 }
 #header-top img{
 	display:block;
@@ -112,19 +129,6 @@ div#w3-universal-nav {
 	
 /*-- Header part Ends Here --*/
 
-/*-- Portfolio Starts Here --*/
-.portfolio{
-	text-align:center;
-}
-.portfolio-top {
-	text-align: center;
-}
-.portfolio-top h3 {
-	font-weight: 700;
-	font-family: 'Droid Sans', sans-serif;
-	font-size:25px;
-	padding: 20px 0px 10px 0px;
-}
 
 /*-- Search Bar Starts Here --*/    
 #search {
@@ -180,3 +184,73 @@ p.copyright a:hover{
 	color: #fff;
 }
 /*-- Footer Ends Here --*/
+
+/*-- Search Bar Starts Here --*/    
+    .cf:before, .cf:after{
+      content:"";
+      display:table;
+    }
+    
+    .cf:after{
+      clear:both;
+    }
+
+    .cf{
+      zoom:1;
+    }
+
+    .search-bar {
+        width: 80%;
+        margin: 1em auto 2em auto;
+		}
+
+    
+    .search-bar input {
+        width: 70%;
+        height: 100%;
+        padding: 10px 5px;
+        float: left;    
+        font: bold 80% 'lucida sans', 'trebuchet MS', 'Tahoma';
+        background: #eee; 
+		border-radius:0px;
+		border-width: 1px;
+		border-color:gray;
+    }
+    
+    .search-bar input:focus {
+        outline: 0;
+        background: #fff;
+        -moz-box-shadow: 0 0 2px rgba(0,0,0,.8) inset;
+        -webkit-box-shadow: 0 0 2px rgba(0,0,0,.8) inset;
+        box-shadow: 0 0 2px rgba(0,0,0,.8) inset;
+    }
+
+    
+    .search-bar button {
+		overflow: visible;
+        position: relative;
+        float: left;
+        border: 0;
+        padding: 0;
+        height: 38.4px;
+        width: 25%;
+        font: bold 15px/40px 'lucida sans', 'trebuchet MS', 'Tahoma';
+        color: #fff;
+        text-transform: uppercase;
+        background: #DD2227;
+    }   
+      
+    .search-bar button:hover{		
+        background: #e54040;
+		
+    }	
+      
+    .search-bar button:active,
+    .search-bar button:focus{   
+        background: #c42f2f;    
+    }   
+    
+    .search-bar button::-moz-focus-inner {
+        border: 0;
+        padding: 0;
+    }

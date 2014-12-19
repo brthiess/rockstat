@@ -11,6 +11,11 @@ LeadFirst varchar(30),
 PRIMARY KEY (ID)
 );
 
+CREATE TABLE Player(
+FirstName varchar(30),
+LastName varchar(30)
+);
+
 CREATE TABLE EndScore(
 EndNumber int,
 Game int NOT NULL,

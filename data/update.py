@@ -2,7 +2,7 @@ import MySQLdb
 
 db = MySQLdb.connect(host="localhost", # your host, usually localhost
                      user="root", # your username
-                      passwd="asdfasdf", # your password
+                      passwd="jikipol", # your password
                       db="rockstat") # name of the data base
 					  
 cur = db.cursor()
@@ -158,13 +158,66 @@ for g in range(0, len(games_dat)):
 			continue
 		event = games_dat[g+1].split("'")
 		game_event = event[0]
+		
+		numrows = cur.execute("SELECT * FROM Player WHERE LastName LIKE '%" + hammer_skip_last + "%' AND FirstName LIKE '%" + hammer_skip_first + "%'")
+														
+		if (numrows == 0):
+			cur.execute("INSERT INTO Player VALUES \
+						('" + hammer_skip_first + "', '" + hammer_skip_last + "')")
+						
+						
+		numrows = cur.execute("SELECT * FROM Player WHERE LastName LIKE '%" + hammer_third_last + "%' AND FirstName LIKE '%" + hammer_third_first + "%'")
+														
+		if (numrows == 0):
+			cur.execute("INSERT INTO Player VALUES \
+						('" + hammer_third_first + "', '" + hammer_third_last + "')")
+						
+		numrows = cur.execute("SELECT * FROM Player WHERE LastName LIKE '%" + hammer_second_last + "%' AND FirstName LIKE '%" + hammer_second_first + "%'")
+														
+		if (numrows == 0):
+			cur.execute("INSERT INTO Player VALUES \
+						('" + hammer_second_first + "', '" + hammer_second_last + "')")
+						
+						
+		numrows = cur.execute("SELECT * FROM Player WHERE LastName LIKE '%" + hammer_lead_last + "%' AND FirstName LIKE '%" + hammer_lead_first + "%'")
+														
+		if (numrows == 0):
+			cur.execute("INSERT INTO Player VALUES \
+						('" + hammer_lead_first + "', '" + hammer_lead_last + "')")
+						
+		numrows = cur.execute("SELECT * FROM Player WHERE LastName LIKE '%" + other_skip_last + "%' AND FirstName LIKE '%" + other_skip_first + "%'")
+														
+		if (numrows == 0):
+			cur.execute("INSERT INTO Player VALUES \
+						('" + other_skip_first + "', '" + other_skip_last + "')")
+						
+		numrows = cur.execute("SELECT * FROM Player WHERE LastName LIKE '%" + other_third_last + "%' AND FirstName LIKE '%" + other_third_first + "%'")
+														
+		if (numrows == 0):
+			cur.execute("INSERT INTO Player VALUES \
+						('" + other_third_first + "', '" + other_third_last + "')")
+						
+		numrows = cur.execute("SELECT * FROM Player WHERE LastName LIKE '%" + other_second_last + "%' AND FirstName LIKE '%" + other_second_first + "%'")
+														
+		if (numrows == 0):
+			cur.execute("INSERT INTO Player VALUES \
+						('" + other_second_first + "', '" + other_second_last + "')")
+						
+		numrows = cur.execute("SELECT * FROM Player WHERE LastName LIKE '%" + other_lead_last + "%' AND FirstName LIKE '%" + other_lead_first + "%'")
+														
+		if (numrows == 0):
+			cur.execute("INSERT INTO Player VALUES \
+						('" + other_lead_first + "', '" + other_lead_last + "')")
+						
+		
+						
+								
 		#All data for a game has been obtained.
 		#Put data from the game into sql
 		#Check to make sure team is not a duplicate
-		numrows = cur.execute("SELECT ID FROM Team WHERE SkipLast = '" + hammer_skip_last + "' AND SkipFirst = '" + hammer_skip_first \
-					+ "' AND ThirdLast = '" + hammer_third_last + "' AND ThirdFirst = '" + hammer_third_first \
-					+ "' AND SecondLast = '" + hammer_second_last + "' AND SecondFirst = '" + hammer_second_first \
-					+ "' AND LeadLast = '" + hammer_lead_last + "' AND LeadFirst = '" + hammer_lead_first \
+		numrows = cur.execute("SELECT ID FROM Team WHERE SkipLast = '" + hammer_skip_last + "' AND ThirdLast = '" + hammer_third_last + "' \
+					AND SecondLast = '" + hammer_second_last + "' \
+					AND LeadLast = '" + hammer_lead_last \
 					+ "'")
 		hammer_team_id = -1
 		#Team already exists.  
@@ -184,10 +237,10 @@ for g in range(0, len(games_dat)):
 			hammer_team_id = cur.fetchall()[0][0]
 			
 		#Get ID for other team
-		numrows = cur.execute("SELECT ID FROM Team WHERE SkipLast = '" + other_skip_last + "' AND SkipFirst = '" + other_skip_first \
-					+ "' AND ThirdLast = '" + other_third_last + "' AND ThirdFirst = '" + other_third_first \
-					+ "' AND SecondLast = '" + other_second_last + "' AND SecondFirst = '" + other_second_first \
-					+ "' AND LeadLast = '" + other_lead_last + "' AND LeadFirst = '" + other_lead_first \
+		numrows = cur.execute("SELECT ID FROM Team WHERE SkipLast = '" + other_skip_last\
+					+ "' AND ThirdLast = '" + other_third_last \
+					+ "' AND SecondLast = '" + other_second_last\
+					+ "' AND LeadLast = '" + other_lead_last \
 					+ "'")
 		other_team_id = -1
 		#Check to see if other team already in db
@@ -205,30 +258,31 @@ for g in range(0, len(games_dat)):
 			cur.execute("SELECT ID FROM Team ORDER BY id DESC LIMIT 0, 1")
 			other_team_id = cur.fetchall()[0][0]
 		#Added the team to the DB.  Just need to add the game now
-		cur.execute("INSERT INTO Game VALUES(\
+		numrows = cur.execute("SELECT * FROM Game WHERE\
+					GameDate='" + str(game_date) + "'\
+					AND HammerTeamID='" + str(hammer_team_id) + "'\
+					AND OtherTeamID='" + str(other_team_id) + "'\
+					AND Event='" + str(game_event) + "'"\
+					);
+		if (numrows == 0):
+			cur.execute("INSERT INTO Game VALUES(\
 					NULL,\
 					'" + str(game_date) + "',\
 					" + str(hammer_team_id) + ",\
 					" + str(other_team_id) + ",\
 					'" + str(game_event) + "')"\
 					);
-		game_id = cur.lastrowid
+			game_id = cur.lastrowid
 		#Now add linescore
-		for s in range(0, len(hammer_linescore)):
-			if (hammer_linescore[s] != 'X' and other_linescore[s] != 'X'):
-			
-				# print("INSERT INTO EndScore VALUES(\
-				# " + str(s) + ",\
-				# " + str(game_id) + ",\
-				# " + str(hammer_linescore[s]) + ",\
-				# " + str(other_linescore[s]) + ")")
-				cur.execute("INSERT INTO EndScore VALUES(\
-				" + str(s) + ",\
-				" + str(game_id) + ",\
-				" + str(hammer_linescore[s]) + ",\
-				" + str(other_linescore[s]) + ")")
-			else:
-				break
+			for s in range(0, len(hammer_linescore)):
+				if (hammer_linescore[s] != 'X' and other_linescore[s] != 'X'):
+					cur.execute("INSERT INTO EndScore VALUES(\
+					" + str(s) + ",\
+					" + str(game_id) + ",\
+					" + str(hammer_linescore[s]) + ",\
+					" + str(other_linescore[s]) + ")")
+				else:
+					break
 		hammer_linescore=[]
 		other_linescore=[]
 db.commit()
