@@ -1,10 +1,15 @@
+//Search Value
+var input = "";
+
 $(document).ready(function(){
   $("#search-button").click(function(){
-	event.preventDefault()
+	event.preventDefault();
+	getInput();
 	showResult();
   });
   $('#search-stats').keyup(function(e) {
 	if(e.keyCode == 13) {
+		getInput();
 		showResult();
     }
    });
@@ -13,12 +18,19 @@ $(document).ready(function(){
 		console.log(tile_class);
 		showTile(tile_class);
 	});
+	
+	$('body').on('click','.back-button-selected-img',function(){
+		event.preventDefault();
+		console.log("Heello");
+		showResult();
+	});
 });
 
-
+function getInput() {
+	input=$("#search-stats").val();
+}
 
 function showResult() {
-	var input=$("#search-stats").val();
 	if (input != ""){
 		var target = document.getElementById('spinner');
 		var spinner = new Spinner(opts).spin(target);
@@ -30,6 +42,7 @@ function showResult() {
             data:"input="+input,
             success:function(data){				
 				$("#search-container").html(data);
+				$("#chart-container").html("");
 				$("#search").val("");
 				spinner.stop();
             }
@@ -48,16 +61,15 @@ function showTile(tile_class){
 	
 	$.getScript("data/Chart.min.js", function(data, textStatus, jqxhr) {
 		console.log("Load was performed");	
-	});
-	
-	$.ajax({
-		type:"post",
-		url:"data/tile.php",
-		data:"type="+tile_type+"tile_name"+tile_name,
-		success:function(data){
-			spinner.stop();
-			$("#chart-container").html("Blah");
-			}
+		$.ajax({
+			type:"post",
+			url:"data/tile.php",
+			data:"type="+tile_type+"tile_name"+tile_name,
+			success:function(data){
+				spinner.stop();
+				$("#chart-container").html(data);
+				}
+		});
 	});
 }
 
