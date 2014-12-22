@@ -10,7 +10,7 @@ $input = filter_input(INPUT_POST, 'input');
 $pieces = explode(" ", $input);
 
 try {
-	$con = new PDO('mysql:host=localhost;dbname=rockstat', "root", "asdfadsf");
+	$con = new PDO('mysql:host=localhost;dbname=rockstat', "root", "jikipol");
 	$con->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 	$player_results = array();
 	$stmt = $con->prepare("SELECT * FROM Player Where FirstName LIKE :name OR LastName LIKE :name");
