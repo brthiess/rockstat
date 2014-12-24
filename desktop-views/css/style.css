@@ -1,13 +1,17 @@
 body{
 	background:linear-gradient(
-      rgba(0, 0, 0, 0.3), 
-      rgba(0, 0, 0, 0.3)
+      rgba(0, 0, 0, 0.2), 
+      rgba(0, 0, 0, 0.2)
     ), url(../images/bg.jpg) no-repeat 0px 0px;
 	background-size:cover;
 	-webkit-background-size:cover;
 	-moz-background-size:cover;
 	-o-background-size:cover;
 	font-family: 'Droid Serif', serif;
+}
+
+body:hover{
+	cursor: default;
 }
 /*--Header Starts Here-- */
 .header{
@@ -428,7 +432,11 @@ div.tile a {
 /***********************************
 *Player Stats
 **********************************/
-
+.title-name {
+	color: white;
+	font-size: 2em;
+	float:right:
+}
 .vertical-divider {
 	height:100%;
 	position:absolute;
@@ -486,34 +494,30 @@ div.big-tile a {
 	border-color:white;
 }
 
-.big-square-tile {
+.big-tall-tile{
 	margin:5px;
 	width: 243px;
-	height:243px;
+	height:500px;
 	border-style:solid;
 	border-width:3px;
 	font-family: 'Droid Sans', sans-serif;
 	color: white;
 }
 
-.big-square-tile a {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    top: 0;
-    left: 0;
-    text-decoration: none; /* No underlines on the link */
-    z-index: 10; /* Places the link above everything else in the div */
-    background-color: #FFF; /* Fix to make div clickable in IE */
-    opacity: 0; /* Fix to make div clickable in IE */
-    filter: alpha(opacity=1); /* Fix to make div clickable in IE */
+
+.big-double-tile {
+	margin: 5px;
+	width: 500px;
+	height: 500px;
+	font-family: 'Droid Sans', sans-serif;
+	color: white;
 }
 
-.big-square-tile:hover {
-	border-style:solid;
-	border-width:3px;
-	border-color:white;
+.extended {
+	height: 575px;
 }
+
+
 
 .legend-pie-title {
 	color: white;
@@ -554,13 +558,13 @@ div.big-tile a {
 
 
 .win-with {
-	background: #2d89ef;
+	background: #2ecc71;
 	position: absolute;
 	bottom:72%;
 	right: 30%;
 }
 .win-without {
-	background: #eff4ff;
+	background: #16a085;
 	position: absolute;
 	bottom:58%;
 	right: 30%
@@ -599,9 +603,11 @@ div.big-tile a {
 }
 .back-button-img :hover{
 	opacity: 0;
+	cursor: pointer;
 }
 
 .back-button-selected-img:hover{
+	cursor:pointer;
 	opacity: 1;
 }
 
@@ -632,4 +638,357 @@ div.big-tile a {
 	left: 5%;
 	font-size: 1.1em;
 }
+
+.scoring-frequency {
+	background: #2c3e50;
+	border-color:#2c3e50;
+}
+
+.scoring-frequency-title {
+	position:absolute;
+	font-size: 1.5em;	
+	height: 12%;
+	width:100%;
+	left: 0%;
+	background: #2c3e50;
+}
+
+.scoring-frequency-title-text {
+	position:absolute;
+	width:50%;
+	left:0%;
+	top:0%;
+}
+
+.scoring-frequency-table {
+	position:absolute;
+	height: 88%;
+	width:243px;
+	background: #6C7A89;
+	bottom: -3px;
+	left:-3px;
+}
+.scoring-frequency-title-img img {
+	position:absolute;
+	height:100%;
+	left:45%;
+	top:0%;
+}
+
+.scoring-frequency-title-rank {
+	position: absolute;
+	left:80%;
+	bottom:0%;
+}
+.scoring-frequency-table .table-entry {
+	position:relative;
+	width:100%;
+	height:14.28%;
+	border-bottom:1px solid;
+	border-bottom-color:#2c3e50;
+	font-size:2em;
+}
+
+.table-entry p {
+	position:relative;
+	top:17%;
+	left: 30%;
+}
+
+
+.scoring-frequency-table .table-entry:hover {
+	background: #95a5a6;
+}
+
+ .table-entry .scoring-indicator {
+	font-size: 1em;
+	position: relative;
+	left: 5%;
+	bottom: 65%;
+	height: 40px;
+	width: 40px;
+	border-radius:20px;
+	text-align:center;
+	vertical-align:middle;
+}
+.table-entry-rank-container {
+	position: absolute;
+	left: 75%;
+	bottom:0%;
+	background: #7f8c8d;
+	height: 100%;
+	width:25%;
+}
+
+.table-entry-rank-container p{
+	position: absolute;
+	left: 0%;
+	width: 100%;
+	text-align: center;
+}
+
+
+.scoring-frequency-table .three {
+	background: #2ecc71;
+}
+
+.scoring-frequency-table .two {
+	background: #27ae60;
+}
+
+.scoring-frequency-table .one {
+	background: #f1c40f;
+}
+
+.scoring-frequency-table .blank {
+	background: #f39c12;
+}
+
+.scoring-frequency-table .minus-one {
+	background: #ea5f50;
+}
+
+.scoring-frequency-table .minus-two {
+	background: #c0392b;
+}
+
+.scoring-frequency-table .minus-three {
+	background: #ee1111;
+}
+
+.scoring-frequency-table .net {
+	background: #2c3e50;
+	font-size: 0.8em;
+}
+
+.scoring-frequency-table .net p{
+	position:relative;
+	top:10%;
+	left:0%;
+}
+.end-chart {
+	position: absolute;
+	top: 0%;
+	left: 0%;
+	height: 55%;
+	width: 100%;
+	background:#2c3e50;
+}
+.line-chart-container {
+	background: #2c3e50;
+	position: absolute;
+	bottom: 0%;
+	left:0%;
+	height:250px;
+	width:500px;
+}
+
+.line-chart-title {
+	position: absolute;
+	font-size: 1.2em;
+	top:0%;
+	left:0%;
+}
+
+.legend-circle {
+	height:10px;
+	width:10px;
+	border-radius:5px;
+}
 	
+.hammer-circle {
+	position:absolute;
+	top: 1.5%;
+	left:70%;
+	background: #2ecc71;
+}
+
+.not-hammer-circle {
+	position:absolute;
+	top:1.5%;
+	left:44%;
+	background: #e74c3c;
+}
+
+.legend-text-with {
+	position:absolute;
+	top:0%;
+	left: 73%;
+}
+
+.legend-text-without {
+	position:absolute;
+	top:0%;
+	left:47%;
+}
+
+.winning-percentage-chart {
+	position:absolute;
+	top:58%;
+	left: 0%;
+	height: 42%;
+	width:100%;
+	background:#2980b9;
+}
+
+.winning-percentage-chart-container {
+	position: absolute;
+	bottom: 0%;
+	left: 0%;
+}
+
+.winning-percentage-tiles {
+	background: #7f8c8d;
+	border-color: #7f8c8d;
+}
+
+.winning-percentage-tiles-container  {
+	position: absolute;
+	left: 0%;
+	top: 10%;
+	width:100%;
+	height: 85%;
+}
+
+.winning-percentage-tiles-hammer-icon {
+	position: absolute;
+	height: 10%;
+	left: 76%;
+	top: 0%;
+	border-bottom: 2px solid transparent;
+}
+
+.winning-percentage-tiles-hammer-icon:hover {
+	cursor: pointer;
+	border-bottom-color: #2ecc71;
+
+}
+
+.winning-percentage-tiles-not-hammer-icon:hover {
+	cursor: pointer;
+	border-bottom-color: #2ecc71;
+}
+
+.winning-percentage-tiles-hammer-icon img {
+	position:absolute;
+	height: 100%;
+	opacity:0;
+}
+.winning-percentage-tiles-not-hammer-icon {
+	position: absolute;
+	height: 10%;
+	left: 87%;
+	top: 0.2%;
+	border-bottom: 2px solid transparent;
+}
+
+.winning-percentage-tiles-not-hammer-icon img {
+	position:absolute;
+	height: 100%;
+}
+
+.winning-percentage-tiles-hammer-icon .selected-img {
+	opacity:1;
+	border-bottom: 2px solid #2ecc71;
+}
+
+.winning-percentage-tiles-not-hammer-icon .selected-img {
+	opacity:0;
+	border-bottom: 2px solid #2ecc71;
+}
+
+.mini-tile {
+	position: relative;
+	display:inline-block;
+	height: 40px;
+	width: 40px;
+	margin: 3px;
+	background: #34495e;
+}
+
+.mini-tile:hover {
+	background: #2c3e50;
+	cursor: default;
+}
+
+.end-playing-tile {
+	background: #2ecc71;
+}
+
+.end-playing-tile:hover {
+	background: #27ae60;
+	cursor: default;
+}
+
+.end-playing-tile p{
+	position:absolute;
+	font-size: 1.4em;
+	line-height: 110%;
+	text-align: center;
+	width: 100%;
+	vertical-align:middle;
+}
+
+.mini-tile .end-percentage{
+	position:absolute;
+	top: 25%;
+	font-size: 1.4em;
+	line-height: 110%;
+	text-align: center;
+	width: 100%;
+}
+
+.hammer-tiles .end-percentage {
+	opacity: 1;
+	z-index: 10;
+}
+
+
+.hammer-tiles {
+	z-index: 10;
+}
+
+.not-hammer-tiles {
+	z-index: 5;
+}
+
+.not-hammer-tiles .end-percentage {
+	opacity:0;
+	z-index: 5;
+}
+
+.end-number{
+	top:25%;
+}
+
+.end-playing-tile div {
+	position:absolute;
+	line-height: 110%;
+	text-align: center;
+	width: 100%;
+	vertical-align:middle;
+	font-size: 1.1em;
+}
+
+.tile-chart-title{
+	display:inline-block;
+	font-size: 1.7em;
+	width: 50%;
+	height: 10%;
+	line-height:110%;
+}
+
+.tile-chart-logo {
+	float:left;
+	display:inline-block;
+	height:10%;	
+	vertical-align: top;
+	position: relative;
+	left: -8px;
+}
+
+.tile-chart-logo img{
+	height: 100%;
+}
+
+

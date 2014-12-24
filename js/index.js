@@ -1,6 +1,9 @@
 //Search Value
 var input = "";
 
+//Hammer Value for Tiles
+var globalHammer = 1;
+
 $(document).ready(function(){
   $("#search-button").click(function(){
 	event.preventDefault();
@@ -20,11 +23,55 @@ $(document).ready(function(){
 	});
 	
 	$('body').on('click','.back-button-selected-img',function(){
-		event.preventDefault();
 		console.log("Heello");
 		showResult();
 	});
+	$('body').on('click','.back-button-img',function(){
+		console.log("Heello");
+		showResult();
+	});
+	$('body').on('click','.winning-percentage-tiles-hammer-icon',function(){
+		console.log("Heello");
+		switchHammerResults(1);
+	});
+	$('body').on('click','.winning-percentage-tiles-not-hammer-icon',function(){
+		console.log("Heello");
+		switchHammerResults(0);
+	});
 });
+
+function switchHammerResults(hammer) {
+	if(hammer == globalHammer) {
+		return;
+	}
+	else {
+		globalHammer = hammer;
+		if (globalHammer == 1) {
+			$(".hammer-tiles .end-percentage").fadeTo("slow", 1, function() {});
+			$(".hammer-tiles").zIndex(10);
+			$(".not-hammer-tiles .end-percentage").fadeTo("slow", 0, function() {});
+			$(".not-hammer-tiles").zIndex(5);
+			$(".winning-percentage-tiles-hammer-icon").css("border-bottom-color", "#2ecc71");
+			$(".winning-percentage-tiles-not-hammer-icon").css("border-bottom-color", "transparent");
+			$(".winning-percentage-tiles-not-hammer-icon .selected-img").css("opacity", "0");
+			$(".winning-percentage-tiles-hammer-icon .selected-img").css("opacity", "1");
+			$(".winning-percentage-tiles-hammer-icon .default-img").css("opacity", "0");
+			$(".winning-percentage-tiles-not-hammer-icon .default-img").css("opacity", "1");
+		}
+		else {
+			$(".hammer-tiles .end-percentage").fadeTo("slow", 0, function(){});
+			$(".hammer-tiles").zIndex(5);
+			$(".not-hammer-tiles .end-percentage").fadeTo("slow", 1, function(){});
+			$(".not-hammer-tiles").zIndex(10);
+			$(".winning-percentage-tiles-not-hammer-icon").css("border-bottom-color", "#2ecc71");
+			$(".winning-percentage-tiles-hammer-icon").css("border-bottom-color", "transparent");
+			$(".winning-percentage-tiles-not-hammer-icon .selected-img").css("opacity", "1");
+			$(".winning-percentage-tiles-hammer-icon .selected-img").css("opacity", "0");
+			$(".winning-percentage-tiles-hammer-icon .default-img").css("opacity", "1");
+			$(".winning-percentage-tiles-not-hammer-icon .default-img").css("opacity", "0");
+		}
+	}
+}
 
 function getInput() {
 	input=$("#search-stats").val();
@@ -64,7 +111,7 @@ function showTile(tile_class){
 		$.ajax({
 			type:"post",
 			url:"data/tile.php",
-			data:"type="+tile_type+"tile_name"+tile_name,
+			data:{"tile_type": tile_type, "tile_name": tile_name},
 			success:function(data){
 				spinner.stop();
 				$("#chart-container").html(data);
