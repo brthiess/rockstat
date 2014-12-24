@@ -34,24 +34,24 @@ catch(PDOException $e){
 $output  = <<<HERE
         <!-- pie chart  canvas element -->
 		<div class="row">
-			<div class="col-sm-1">
+			<div class="col-xs-1">
 			</div>
-			<div class="col-sm-1 back-button-container">
+			<div class="col-xs-1 back-button-container">
 				<img class="back-button-img" src="tiles/back-button.png">
 				<img class="back-button-selected-img" src="tiles/back-button-selected.png">
 			</div>
-			<div class="col-sm-10 title-name">
+			<div class="col-xs-10 title-name">
 				Team: $pieces[0] $pieces[1]
 			</div>
 		</div>
 		<div class="row row-centered">
-			<div class="col-sm-6 big-tile game-wins col-centered">
+			<div class="col-xs-6 big-tile game-wins col-centered">
 				<div class="num-of-games">$numGames Games</div>
 				<div class="num-stats">423 Wins | 177 Losses | 78% Win Percentage</div>
 				<div class="points-per-game">6.5 Points For / Game | 3.4 Points Against / Game</div>
 				<div class="events-played">67 Events Played | 7 Events Won</div>
 			</div>
-			<div class="col-sm-6 big-tile game-stats col-centered">
+			<div class="col-xs-6 medium-tile game-stats col-centered">
 				<div class="pie-chart-container">
 					<canvas id="countries" width="230" height="200"></canvas>
 				</div>
@@ -64,7 +64,7 @@ $output  = <<<HERE
 			</div>
 		</div>
 		<div class="row row-centered">
-			<div class="col-sm-3 big-tall-tile scoring-frequency col-centered">
+			<div class="col-xs-3 big-tall-tile scoring-frequency col-centered">
 				<div class="scoring-frequency-title">
 					<div class="scoring-frequency-title-text">
 						Scoring Frequency
@@ -142,7 +142,7 @@ $output  = <<<HERE
 					</div>
 				</div>
 			</div>
-			<div class="col-sm-3 big-tall-tile scoring-frequency col-centered">
+			<div class="col-xs-3 big-tall-tile scoring-frequency col-centered">
 			<div class="scoring-frequency-title">
 					<div class="scoring-frequency-title-text">
 						Scoring Frequency
@@ -221,7 +221,7 @@ $output  = <<<HERE
 				</div>
 			
 			</div>
-			<div class="col-sm-6 big-double-tile col-centered">
+			<div class="col-xs-6 big-double-tile col-centered">
 				<div class="end-chart">
 					<div class="line-chart-title">
 							End By End Average Scoring
@@ -232,7 +232,7 @@ $output  = <<<HERE
 					</div>
 					<div class="line-chart-container">
 						
-						<canvas id="buyers" width="500" height="250"></canvas>
+						<canvas id="buyers" width="800" height="375"></canvas>
 					</div>
 				</div>
 				<div class="winning-percentage-chart">
@@ -240,13 +240,13 @@ $output  = <<<HERE
 						Winning Percentage Over Time
 					</div>
 					<div class="winning-percentage-chart-container">
-						<canvas id="buyers-2" width="500" height="150"></canvas>
+						<canvas id="buyers-2" width="800" height="400"></canvas>
 					</div>
 				</div>
 			</div>
 		</div>
 		<div class="row row-centered">
-			<div class="col-sm-6 big-double-tile extended winning-percentage-tiles col-centered">
+			<div class="col-xs-6 big-double-tile extended winning-percentage-tiles col-centered">
 				<div class="tile-chart-logo">
 					<img src="tiles/stat-icon.png">
 				</div>
@@ -926,7 +926,7 @@ $output  = <<<HERE
             // pie chart options
             var pieOptions = {
                  segmentShowStroke : false,
-                 animateScale : true,
+                 animateScale : false,
 				 responsive: true
             }
             // get pie chart canvas

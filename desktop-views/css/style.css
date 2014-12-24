@@ -448,14 +448,15 @@ div.tile a {
 	height: 90%;
 }
 .pie-chart-container {
-	position: absolute;
-	top: 3%;
-	right:40%;
-	height:250px;
-	width:250px;
+	position: relative;
+	top: 0%;
+	left: 0%;
+	height:80%;
+	width:55%;
 }
 	
 .game-stats {
+	position:relative;
 	background: #2c3e50;	
 	border-color: #2c3e50;
 }

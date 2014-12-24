@@ -34,13 +34,17 @@ img{max-width:100%;}
 font-family: 'Droid Sans', sans-serif;
 color: white;
 }
+
+html, body {
+    max-width: 100%;
+}
+
 body {
-	background:#eff4ff;
+	background:black;
 	width: 100%;
 }
 .header{
 	padding:0px 0px;
-	height: 100vh;
 }
 #w3-masthead {
 	padding: 0 10px;
@@ -165,6 +169,8 @@ div#w3-universal-nav {
 .footer{
 	background: #3498db;
 	padding:0px 0px;
+	position: relative;
+	bottom:0%;
 }
 #footer-logo img {
 	height: 40px;
@@ -254,5 +260,710 @@ p.copyright a:hover{
         border: 0;
         padding: 0;
     }
+	
+	
+.tile{
+	position:relative;
+	margin:5px;
+	width: 90%;
+	height:150px;
+	border-style:solid;
+	border-width:3px;
+	color: white;
+	font-family: 'Droid Sans', sans-serif;
+}
+
+div.tile a {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    text-decoration: none; /* No underlines on the link */
+    z-index: 10; /* Places the link above everything else in the div */
+    background-color: #FFF; /* Fix to make div clickable in IE */
+    opacity: 0; /* Fix to make div clickable in IE */
+    filter: alpha(opacity=1); /* Fix to make div clickable in IE */
+}
+
+.tile:hover{
+	border-style:solid;
+	border-width:3px;
+	border-color:white;
+}
+
+
+
+.player{
+	background:#e74c3c;
+	border-color:#e74c3c;
+}
+
+.tile-logo{
+	position: absolute;
+	right: 25%;
+	top: 15%;
+	width: 50%;
+}
+
+.tile-logo img{
+	width:100%;
+}
+
+
+.player-name{
+	position: absolute;
+	left:5%;
+	width:50%;
+	bottom:2%;
+	font-size: 1.0em;
+	text-align:left;
+}
+
+.team-name{
+	position: absolute;
+	left:0%;
+	width:100%;
+	bottom:0%;
+	font-size: 1.0em;
+	text-align:left;
+}
+
+.team-last-name{
+	position:absolute;
+	font-size: 1.2em;
+	color: white;
+	left: 70%;
+	top: 20%;
+	text-align: center;
+	width:30%;
+}
+
+.event-name{
+	position: absolute;
+	right:5%;
+	width:50%;
+	top:30%;
+	font-size: 2.5em;
+}
+
+.tile-category{
+	position:absolute;
+	right:3%;
+	width:50%;
+	top:0%;
+	font-size:2em;
+}
+
+
+.tile-category p{
+	float: right;
+}
+
+#invisible {
+	opacity: 0;
+}
+
+
+
+.team{
+	background:	#2d89ef;
+	border-color:#2d89ef;
+
+}
+.event{
+	background:#99b433;
+	border-color:#99b433;
+}
+.date{
+	background:#b91d47;
+	border-color:#b91d47;
+}
+
+.date-name{
+	position: absolute;
+	right:5%;
+	width:50%;
+	height:70%;
+	top:30%;
+	font-size: 2.5em;
+	text-align: center;
+}
+.row-centered {
+    text-align:center;
+}
+.col-centered {
+    display:inline-block;
+    float:none;
+    /* reset the text-align */
+    text-align:left;
+    /* inline-block space fix */
+    margin-right:3px;
+}
+
+/***********************************
+*Player Stats
+**********************************/
+.title-name {
+	color: white;
+	font-size: 2em;
+	float:right:
+}
+.vertical-divider {
+	height:100%;
+	position:absolute;
+	right:40%;
+	top:9%;
+}
+	
+.vertical-divider{
+	height: 90%;
+}
+.vertical-divider img {
+	height: 100%;
+}
+.pie-chart-container {
+	position: absolute;
+	top: 15%;
+	left:0%;
+	height:175px;
+	width:50%;
+}
+	
+.game-stats {
+	background: #2c3e50;	
+	border-color: #2c3e50;
+}
+
+.game-wins {
+	background: #603cba;
+	border-color: #603cba;
+}
+	
+.big-tile{
+	margin-top: 5px;
+	margin-bottom: 5px;
+	position:relative;
+	width: 100%;
+	height:400px;
+	font-family: 'Droid Sans', sans-serif;
+	color: white;
+}
+
+
+.medium-tile{
+	margin-top: 5px;
+	margin-bottom: 5px;
+	position:relative;
+	width: 100%;
+	height:200px;
+	font-family: 'Droid Sans', sans-serif;
+	color: white;
+}
+
+.big-tall-tile{
+	margin-top: 5px;
+	margin-bottom: 5px;
+	position:relative;
+	width: 100%;
+	height:500px;
+	font-family: 'Droid Sans', sans-serif;
+	color: white;
+}
+
+
+.big-double-tile {
+	margin-top: 5px;
+	margin-bottom: 5px;
+	position:relative;
+	width: 100%;
+	height: 800px;
+	font-family: 'Droid Sans', sans-serif;
+	color: white;
+}
+
+.extended {
+	height: 1000px;
+}
+
+
+
+.legend-pie-title {
+	color: white;
+	position: absolute;
+	top: 1%;
+	left: 65%;
+	font-size: 1.5em;
+}
+
+.legend-text-win-with {
+	color:white;
+	position: absolute;
+	bottom:60%;
+	left: 72%;
+}
+
+.legend-text-win-without {
+	color:white;
+	position: absolute;
+	bottom:37%;
+	left: 72%;
+
+}
+
+.legend-text-loss-with {
+	color:white;
+	position: absolute;
+	bottom:25%;
+	left:72%;
+}
+
+.legend-text-loss-without {
+	color:white;
+	position: absolute;
+	bottom:5%;
+	left:72%;
+	}
+
+
+.win-with {
+	background: #2ecc71;
+	position: absolute;
+	bottom:61%;
+	right: 30%;
+}
+.win-without {
+	background: #16a085;
+	position: absolute;
+	bottom:44%;
+	right: 30%
+}
+.loss-with {
+	background: #da532c;
+	position: absolute;
+	bottom:27%;
+	right: 30%;
+}
+.loss-without {
+	background: #ee1111;
+	position: absolute;
+	bottom:17%;
+	right: 30%;
+}
+
+.legend-square {
+	height: 10px;
+	width:  10px;
+}
+
+
+.back-button-container {
+	height:5em;
+}
+
+
+.back-button-img {
+	opacity: 1;
+	position: absolute;
+}
+.back-button-selected-img {
+	opacity: 0;
+	position:absolute;
+}
+.back-button-img :hover{
+	opacity: 0;
+	cursor: pointer;
+}
+
+.back-button-selected-img:hover{
+	cursor:pointer;
+	opacity: 1;
+}
+
+.num-of-games {
+	position: absolute;
+	top: 5%;
+	left: 5%;
+	font-size: 5em;
+}
+
+.num-stats {
+	position: absolute;
+	top: 50%;
+	left: 5%;
+	font-size: 1.1em;
+}
+
+.points-per-game {
+	position: absolute;
+	top: 65%;
+	left: 5%;
+	font-size: 1.1em;
+}
+
+.events-played {
+	position: absolute;
+	top: 80%;
+	left: 5%;
+	font-size: 1.1em;
+}
+
+.scoring-frequency {
+	background: #2c3e50;
+}
+
+.scoring-frequency-title {
+	position:absolute;
+	font-size: 1.5em;	
+	height: 12%;
+	width:100%;
+	left: 0%;
+	background: #2c3e50;
+}
+
+.scoring-frequency-title-text {
+	position:absolute;
+	width:50%;
+	left:0%;
+	top:0%;
+}
+
+.scoring-frequency-table {
+	position:absolute;
+	height: 88%;
+	width:100%;
+	left: 0%;
+	top:12%;
+	background: #6C7A89;
+}
+.scoring-frequency-title-img img {
+	position:absolute;
+	height:100%;
+	left:45%;
+	top:0%;
+}
+
+.scoring-frequency-title-rank {
+	position: absolute;
+	left:80%;
+	bottom:0%;
+}
+.scoring-frequency-table .table-entry {
+	position:relative;
+	width:100%;
+	height:14.28%;
+	border-bottom:1px solid;
+	border-bottom-color:#2c3e50;
+	font-size:2em;
+}
+
+.table-entry p {
+	position:relative;
+	top:17%;
+	left: 30%;
+}
+
+
+.scoring-frequency-table .table-entry:hover {
+	background: #95a5a6;
+}
+
+ .table-entry .scoring-indicator {
+	font-size: 0.8em;
+	position: relative;
+	left: 5%;
+	bottom: 50%;
+	height: 40px;
+	width: 40px;
+	border-radius:20px;
+	text-align:center;
+	vertical-align:middle;
+	line-height: 100%;
+}
+
+.table-entry-rank-container {
+	position: absolute;
+	left: 75%;
+	bottom:0%;
+	background: #7f8c8d;
+	height: 100%;
+	width:25%;
+}
+
+.table-entry-rank-container p{
+	position: absolute;
+	left: 0%;
+	width: 100%;
+	text-align: center;
+}
+
+
+.scoring-frequency-table .three {
+	background: #2ecc71;
+}
+
+.scoring-frequency-table .two {
+	background: #27ae60;
+}
+
+.scoring-frequency-table .one {
+	background: #f1c40f;
+}
+
+.scoring-frequency-table .blank {
+	background: #f39c12;
+}
+
+.scoring-frequency-table .minus-one {
+	background: #ea5f50;
+}
+
+.scoring-frequency-table .minus-two {
+	background: #c0392b;
+}
+
+.scoring-frequency-table .minus-three {
+	background: #ee1111;
+}
+
+.scoring-frequency-table .net {
+	background: #2c3e50;
+	font-size: 0.7em;
+}
+
+.scoring-frequency-table .net p{
+	position:relative;
+	top:10%;
+	left:0%;
+}
+.end-chart {
+	position: absolute;
+	top: 0%;
+	left: 0%;
+	height: 55%;
+	width: 100%;
+	background:#2c3e50;
+}
+.line-chart-container {
+	background: #2c3e50;
+	position: absolute;
+	bottom: 0%;
+	left:0%;
+	height:70%;
+	width:100%;
+}
+
+.line-chart-title {
+	position: absolute;
+	font-size: 1.2em;
+	top:0%;
+	left:0%;
+}
+
+.legend-circle {
+	height:10px;
+	width:10px;
+	border-radius:5px;
+}
+	
+.hammer-circle {
+	position:absolute;
+	top: 10%;
+	left:3%;
+	background: #2ecc71;
+}
+
+.not-hammer-circle {
+	position:absolute;
+	top:20%;
+	left:3%;
+	background: #e74c3c;
+}
+
+.legend-text-with {
+	position:absolute;
+	top:9%;
+	left: 7%;
+}
+
+.legend-text-without {
+	position:absolute;
+	top:19%;
+	left:7%;
+}
+
+.winning-percentage-chart {
+	position:absolute;
+	top:58%;
+	left: 0%;
+	height: 42%;
+	width:100%;
+	background:#2980b9;
+}
+
+
+.winning-percentage-chart-container {
+	position: absolute;
+	bottom: 0%;
+	left: 0%;
+	width:100%;
+}
+
+.winning-percentage-tiles {
+	background: #7f8c8d;
+	border-color: #7f8c8d;
+}
+
+.winning-percentage-tiles-container  {
+	position: absolute;
+	left: 0%;
+	top: 20%;
+	width:100%;
+	height: 85%;
+}
+
+.winning-percentage-tiles-hammer-icon {
+	position: absolute;
+	height: 10%;
+	left: 1%;
+	top: 9%;
+	border-bottom: 2px solid transparent;
+}
+
+.winning-percentage-tiles-hammer-icon:hover {
+	cursor: pointer;
+	border-bottom-color: #2ecc71;
+
+}
+
+.winning-percentage-tiles-not-hammer-icon:hover {
+	cursor: pointer;
+	border-bottom-color: #2ecc71;
+}
+
+.winning-percentage-tiles-hammer-icon img {
+	position:absolute;
+	height: 100%;
+	opacity:0;
+}
+.winning-percentage-tiles-not-hammer-icon {
+	position: absolute;
+	height: 10%;
+	left: 51%;
+	top: 9.2%;
+	border-bottom: 2px solid transparent;
+}
+
+.winning-percentage-tiles-not-hammer-icon img {
+	position:absolute;
+	height: 100%;
+}
+
+.winning-percentage-tiles-hammer-icon .selected-img {
+	opacity:1;
+	border-bottom: 2px solid #2ecc71;
+}
+
+.winning-percentage-tiles-not-hammer-icon .selected-img {
+	opacity:0;
+	border-bottom: 2px solid #2ecc71;
+}
+
+.mini-tile {
+	position: relative;
+	display:inline-block;
+	height: 40px;
+	width: 40px;
+	margin: 3px;
+	background: #34495e;
+}
+
+.mini-tile:hover {
+	background: #2c3e50;
+	cursor: default;
+}
+
+.end-playing-tile {
+	background: #2ecc71;
+}
+
+.end-playing-tile:hover {
+	background: #27ae60;
+	cursor: default;
+}
+
+.end-playing-tile p{
+	position:absolute;
+	font-size: 1.4em;
+	line-height: 110%;
+	text-align: center;
+	width: 100%;
+	vertical-align:middle;
+}
+
+.mini-tile .end-percentage{
+	position:absolute;
+	top: 25%;
+	font-size: 1.4em;
+	line-height: 110%;
+	text-align: center;
+	width: 100%;
+}
+
+.hammer-tiles .end-percentage {
+	opacity: 1;
+	z-index: 10;
+}
+
+
+.hammer-tiles {
+	z-index: 10;
+}
+
+.not-hammer-tiles {
+	z-index: 5;
+}
+
+.not-hammer-tiles .end-percentage {
+	opacity:0;
+	z-index: 5;
+}
+
+.end-number{
+	top:25%;
+}
+
+.end-playing-tile div {
+	position:absolute;
+	line-height: 110%;
+	text-align: center;
+	width: 100%;
+	vertical-align:middle;
+	font-size: 1.1em;
+}
+
+.tile-chart-title{
+	display:inline-block;
+	font-size: 1.7em;
+	width: 50%;
+	height: 10%;
+	line-height:110%;
+}
+
+.tile-chart-logo {
+	float:left;
+	display:inline-block;
+	height:10%;	
+	vertical-align: top;
+	position: relative;
+	left: -8px;
+}
+
+.tile-chart-logo img{
+	height: 100%;
+}
+
+
+
 	
 
