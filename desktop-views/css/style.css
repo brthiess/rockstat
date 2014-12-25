@@ -435,7 +435,8 @@ div.tile a {
 .title-name {
 	color: white;
 	font-size: 2em;
-	float:right:
+	float:right;
+	font-family: 'Droid Sans', sans-serif;
 }
 .vertical-divider {
 	height:100%;
@@ -448,15 +449,14 @@ div.tile a {
 	height: 90%;
 }
 .pie-chart-container {
-	position: relative;
-	top: 0%;
-	left: 0%;
-	height:80%;
-	width:55%;
+	position: absolute;
+	top: 3%;
+	right:40%;
+	height:250px;
+	width:250px;
 }
 	
 .game-stats {
-	position:relative;
 	background: #2c3e50;	
 	border-color: #2c3e50;
 }

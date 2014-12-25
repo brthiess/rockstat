@@ -1,31 +1,51 @@
 <?php
+
 $tile_name = filter_input(INPUT_POST, 'tile_name');
-$pieces = explode("-", $tile_name);
+//Tile Name
+$tile_player_team_name = explode("-", $tile_name);
+//Tile Type
+$tile_type = filter_input(INPUT_POST, 'tile_type');
+
+//Number of Games for Player or Team
+$num_games = 0;
 
 try {
 	$con = new PDO('mysql:host=localhost;dbname=rockstat', "root", "jikipol");
 	$con->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 	$player_results = array();
-	$stmt = $con->prepare("SELECT ID FROM Team Where SkipFirst = :first_name AND SkipLast = :last_name OR
-													ThirdFirst = :first_name AND ThirdLast = :last_name OR
-													SecondFirst = :first_name AND SecondLast = :last_name OR
-													LeadFirst = :first_name AND LeadLast = :last_name");
-	$stmt->bindParam(':first_name', $pieces[0]);
-	$stmt->bindParam(':last_name', $pieces[1]);
-	$stmt->execute();
-	$result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-	
-	$stmt = $con->prepare("SELECT * FROM Game Where HammerTeamID = :ID OR OtherTeamID = :ID");
-	$stmt->bindParam(':ID', $id);
-	$results = array();
-	for($i = 0; $i < count($result); $i++) {
-		$id = $result[$i]['ID'];
-		$stmt->execute();
-		$resultss = $stmt->fetchAll(PDO::FETCH_ASSOC);
-		$results = array_merge($results, $resultss);
-	}
-	$numGames = count($results);
+	$team_ids = array();
 
+	//Check if tile was a player tile
+	if ($tile_type == 'player') {
+		$stmt = $con->prepare("SELECT ID FROM Team Where SkipFirst = :first_name AND SkipLast = :last_name OR
+														ThirdFirst = :first_name AND ThirdLast = :last_name OR
+														SecondFirst = :first_name AND SecondLast = :last_name OR
+														LeadFirst = :first_name AND LeadLast = :last_name");
+		$stmt->bindParam(':first_name', $tile_player_team_name[0]);
+		$stmt->bindParam(':last_name', $tile_player_team_name[1]);
+		$stmt->execute();
+		//Grab Id's of teams the player has played on
+		$team_ids = $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
+	else if ($tile_type == 'team') {
+		$stmt = $con->prepare("SELECT ID FROM Team Where SkipFirst = :first_name AND SkipLast = :last_name");
+		$stmt->bindParam(':first_name', $tile_player_team_name[0]);
+		$stmt->bindParam(':last_name', $tile_player_team_name[1]);
+		$stmt->execute();
+		$team_ids = $stmt->fetchAll(PDO::FETCH_ASSOC);
+	}
+		//Find all games with those team Id's
+		$stmt = $con->prepare("SELECT * FROM Game Where HammerTeamID = :ID OR OtherTeamID = :ID");
+		$stmt->bindParam(':ID', $id);
+		$results = array();
+		for($i = 0; $i < count($team_ids); $i++) {
+			$id = $team_ids[$i]['ID'];
+			$stmt->execute();
+			$result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+			$results = array_merge($results, $result);
+
+		$numGames = count($results);
+	}
 }
 catch(PDOException $e){
 	echo 'ERROR:' . $e->getMessage();
@@ -41,7 +61,7 @@ $output  = <<<HERE
 				<img class="back-button-selected-img" src="tiles/back-button-selected.png">
 			</div>
 			<div class="col-sm-10 title-name">
-				Team: $pieces[0] $pieces[1]
+				Team: $tile_player_team_name[0] $tile_player_team_name[1]
 			</div>
 		</div>
 		<div class="row row-centered">
@@ -53,7 +73,7 @@ $output  = <<<HERE
 			</div>
 			<div class="col-sm-6 big-tile game-stats col-centered">
 				<div class="pie-chart-container">
-					<canvas id="countries" width="230" height="200"></canvas>
+					<canvas id="countries" width="230" height="230"></canvas>
 				</div>
 				<div class="vertical-divider"><img src="tiles/vertical_divider.png"></div>
 				<div class="legend-pie-title">Game Stats</div>
@@ -890,8 +910,7 @@ $output  = <<<HERE
             // draw line chart
             new Chart(buyers).Line(buyerData, {
 			scaleShowGridLines: false,
-			scaleFontColor: "#fff",
-			responsive: true
+			scaleFontColor: "#fff"
 			});
 			
 			// get line chart canvas
@@ -899,8 +918,7 @@ $output  = <<<HERE
             // draw line chart
             new Chart(buyers2).Line(buyerData, {
 			scaleShowGridLines: false,
-			scaleFontColor: "#fff",
-			responsive: true
+			scaleFontColor: "#fff"
 			});
 
 		
@@ -926,8 +944,7 @@ $output  = <<<HERE
             // pie chart options
             var pieOptions = {
                  segmentShowStroke : false,
-                 animateScale : true,
-				 responsive: true
+                 animateScale : true
             }
             // get pie chart canvas
             var countries= document.getElementById("countries").getContext("2d");

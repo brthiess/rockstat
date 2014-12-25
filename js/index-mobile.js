@@ -124,12 +124,12 @@ function showTile(tile_class){
 var opts = {
   lines: 13, // The number of lines to draw
   length: 0, // The length of each line
-  width: 11, // The line thickness
-  radius: 35, // The radius of the inner circle
+  width: 7, // The line thickness
+  radius: 15, // The radius of the inner circle
   corners: 1, // Corner roundness (0..1)
   rotate: 0, // The rotation offset
   direction: 1, // 1: clockwise, -1: counterclockwise
-  color: '#333', // #rgb or #rrggbb or array of colors
+  color: '#fff', // #rgb or #rrggbb or array of colors
   speed: 1.2, // Rounds per second
   trail: 60, // Afterglow percentage
   shadow: false, // Whether to render a shadow
