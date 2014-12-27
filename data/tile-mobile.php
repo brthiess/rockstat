@@ -80,7 +80,7 @@ $output  = <<<HERE
 					<div class="table-entry">
 						<p>11.4%</p>
 						<div class="scoring-indicator three">
-							3+
+							<p>3+</p>
 						</div>
 						<div class="table-entry-rank-container">
 							<p>1<sup>st</sup></p>
@@ -89,7 +89,7 @@ $output  = <<<HERE
 					<div class="table-entry">
 						<p>19.4%</p>
 						<div class="scoring-indicator two">
-							2
+							<p>2</p>
 						</div>
 						<div class="table-entry-rank-container">
 							<p>1<sup>st</sup></p>
@@ -98,7 +98,7 @@ $output  = <<<HERE
 					<div class="table-entry">
 						<p>39.9%</p>
 						<div class="scoring-indicator one">
-							1
+							<p>1</p>
 						</div>
 						<div class="table-entry-rank-container">
 							<p>17<sup>th</sup></p>
@@ -107,7 +107,7 @@ $output  = <<<HERE
 					<div class="table-entry">
 						<p>12.0%</p>
 						<div class="scoring-indicator blank">
-							0
+							<p>0</p>
 						</div>
 						<div class="table-entry-rank-container">
 							<p>5<sup>th</sup></p>
@@ -116,7 +116,7 @@ $output  = <<<HERE
 					<div class="table-entry">
 						<p>11.4%</p>
 						<div class="scoring-indicator minus-one">
-							-1
+							<p>-1</p>
 						</div>
 						<div class="table-entry-rank-container">
 							<p>2<sup>nd</sup></p>
@@ -125,7 +125,7 @@ $output  = <<<HERE
 					<div class="table-entry">
 						<p>6.9%</p>
 						<div class="scoring-indicator minus-two">
-							-2+
+							<p>-2+</p>
 						</div>
 						<div class="table-entry-rank-container">
 							<p>1<sup>st</sup></p>
@@ -158,7 +158,7 @@ $output  = <<<HERE
 										<div class="table-entry">
 						<p>11.4%</p>
 						<div class="scoring-indicator three">
-							2+
+							<p>2+</p>
 						</div>
 						<div class="table-entry-rank-container">
 							<p>99<sup>th</sup></p>
@@ -167,7 +167,7 @@ $output  = <<<HERE
 					<div class="table-entry">
 						<p>19.4%</p>
 						<div class="scoring-indicator two">
-							1
+							<p>1</p>
 						</div>
 						<div class="table-entry-rank-container">
 							<p>21<sup>st</sup></p>
@@ -176,7 +176,7 @@ $output  = <<<HERE
 					<div class="table-entry">
 						<p>39.9%</p>
 						<div class="scoring-indicator one">
-							0
+							<p>0</p>
 						</div>
 						<div class="table-entry-rank-container">
 							<p>5<sup>th</sup></p>
@@ -185,7 +185,7 @@ $output  = <<<HERE
 					<div class="table-entry">
 						<p>12.0%</p>
 						<div class="scoring-indicator blank">
-							-1
+							<p>-1</p>
 						</div>
 						<div class="table-entry-rank-container">
 							<p>1<sup>st</sup></p>
@@ -194,7 +194,7 @@ $output  = <<<HERE
 					<div class="table-entry">
 						<p>11.4%</p>
 						<div class="scoring-indicator minus-one">
-							-2
+							<p>-2</p>
 						</div>
 						<div class="table-entry-rank-container">
 							<p>1<sup>st</sup></p>
@@ -203,7 +203,7 @@ $output  = <<<HERE
 					<div class="table-entry">
 						<p>6.9%</p>
 						<div class="scoring-indicator minus-three">
-							-3+
+							<p>-3+</p>
 						</div>
 						<div class="table-entry-rank-container">
 							<p>1<sup>st</sup></p>
@@ -232,7 +232,7 @@ $output  = <<<HERE
 					</div>
 					<div class="line-chart-container">
 						
-						<canvas id="buyers" width="800" height="375"></canvas>
+						<canvas id="buyers" width="800" height="800"></canvas>
 					</div>
 				</div>
 				<div class="winning-percentage-chart">
@@ -240,7 +240,7 @@ $output  = <<<HERE
 						Winning Percentage Over Time
 					</div>
 					<div class="winning-percentage-chart-container">
-						<canvas id="buyers-2" width="800" height="400"></canvas>
+						<canvas id="buyers-2" width="800" height="750"></canvas>
 					</div>
 				</div>
 			</div>

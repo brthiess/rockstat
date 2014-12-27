@@ -658,6 +658,8 @@ p.copyright a:hover{
 	background: #95a5a6;
 }
 
+
+
  .table-entry .scoring-indicator {
 	font-size: 0.8em;
 	position: relative;
@@ -716,6 +718,14 @@ p.copyright a:hover{
 	background: #ee1111;
 }
 
+.scoring-indicator p {
+	position:absolute;
+	left: 0%;
+	top:18%;
+	width: 100%;
+	text-align: center;	
+}
+
 .scoring-frequency-table .net {
 	background: #2c3e50;
 	font-size: 0.7em;
@@ -737,7 +747,7 @@ p.copyright a:hover{
 .line-chart-container {
 	background: #2c3e50;
 	position: absolute;
-	bottom: 0%;
+	bottom: 5%;
 	left:0%;
 	height:70%;
 	width:100%;
