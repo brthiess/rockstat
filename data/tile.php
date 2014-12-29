@@ -8,50 +8,62 @@ $tile_type = filter_input(INPUT_POST, 'tile_type');
 
 //Number of Games for Player or Team
 $num_games = 0;
+//All the games of the selected team(s)
+$gameResults = array();
+//Scoring frequencies of selected team(s)
+$frequencies = array();
 
 try {
+	/***********************************
+	Connect To DB
+	***********************************/
 	$con = new PDO('mysql:host=localhost;dbname=rockstat', "root", "jikipol");
 	$con->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 	$player_results = array();
 	$team_ids = array();
 
-	//Check if tile was a player tile
+	/******************
+	Check For Tile Type
+	******************/
 	if ($tile_type == 'player') {
 		$stmt = $con->prepare("SELECT ID FROM Team Where SkipFirst = :first_name AND SkipLast = :last_name OR
 														ThirdFirst = :first_name AND ThirdLast = :last_name OR
 														SecondFirst = :first_name AND SecondLast = :last_name OR
 														LeadFirst = :first_name AND LeadLast = :last_name");
-		$stmt->bindParam(':first_name', $tile_player_team_name[0]);
-		$stmt->bindParam(':last_name', $tile_player_team_name[1]);
-		$stmt->execute();
-		//Grab Id's of teams the player has played on
-		$team_ids = $stmt->fetchAll(PDO::FETCH_ASSOC);
 	}
 	else if ($tile_type == 'team') {
 		$stmt = $con->prepare("SELECT ID FROM Team Where SkipFirst = :first_name AND SkipLast = :last_name");
-		$stmt->bindParam(':first_name', $tile_player_team_name[0]);
-		$stmt->bindParam(':last_name', $tile_player_team_name[1]);
-		$stmt->execute();
-		$team_ids = $stmt->fetchAll(PDO::FETCH_ASSOC);
 	}
-		//Find all games with those team Id's
-		$stmt = $con->prepare("SELECT * FROM Game Where HammerTeamID = :ID OR OtherTeamID = :ID");
-		$stmt->bindParam(':ID', $id);
-		$results = array();
-		for($i = 0; $i < count($team_ids); $i++) {
-			$id = $team_ids[$i]['ID'];
-			$stmt->execute();
-			$result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-			$results = array_merge($results, $result);
+	$stmt->bindParam(':first_name', $tile_player_team_name[0]);
+	$stmt->bindParam(':last_name', $tile_player_team_name[1]);
+	$stmt->execute();
+	/**********************************
+	Get Teams that the Player has played on (or for team, get the team)
+	**********************************/
+	$team_ids = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-		$numGames = count($results);
+	//Get all games
+	$getGames = $con->prepare("SELECT * FROM Game Where HammerTeamID = :ID OR OtherTeamID = :ID");
+	$getGames->bindParam(':ID', $id);
+	//Get Scoring Frequencies
+	$getFrequencies = $con->prepare("SELECT * FROM ScoringFrequency Where TeamID = :ID");
+	$getFrequencies->bindParam(':ID', $id);
+	for($i = 0; $i < count($team_ids); $i++) {
+		$id = $team_ids[$i]['ID'];
+		$getGames->execute();
+		$games = $getGames->fetchAll(PDO::FETCH_ASSOC);
+		$getFrequencies->execute();
+		$frequencies = $getFrequencies->fetchAll(PDO::FETCH_ASSOC);
+		$gameResults = array_merge($gameResults, $games);
 	}
+	$numGames = count($gameResults);
 }
 catch(PDOException $e){
 	echo 'ERROR:' . $e->getMessage();
 }
 
-$output  = <<<HERE
+
+echo '
         <!-- pie chart  canvas element -->
 		<div class="row">
 			<div class="col-sm-1">
@@ -61,12 +73,12 @@ $output  = <<<HERE
 				<img class="back-button-selected-img" src="tiles/back-button-selected.png">
 			</div>
 			<div class="col-sm-10 title-name">
-				Team: $tile_player_team_name[0] $tile_player_team_name[1]
+				Team: ' . $tile_player_team_name[0] . ' ' . $tile_player_team_name[1] . '
 			</div>
 		</div>
 		<div class="row row-centered">
 			<div class="col-sm-6 big-tile game-wins col-centered">
-				<div class="num-of-games">$numGames Games</div>
+				<div class="num-of-games">' . $numGames . ' Games</div>
 				<div class="num-stats">423 Wins | 177 Losses | 78% Win Percentage</div>
 				<div class="points-per-game">6.5 Points For / Game | 3.4 Points Against / Game</div>
 				<div class="events-played">67 Events Played | 7 Events Won</div>
@@ -98,7 +110,7 @@ $output  = <<<HERE
 				</div>
 				<div class="scoring-frequency-table">
 					<div class="table-entry">
-						<p>11.4%</p>
+						<p>' . $frequencies[6]['rate'] . '</p>
 						<div class="scoring-indicator three">
 							3+
 						</div>
@@ -906,7 +918,7 @@ $output  = <<<HERE
             ]
             }
             // get line chart canvas
-            var buyers = document.getElementById('buyers').getContext('2d');
+            var buyers = document.getElementById("buyers").getContext("2d");
             // draw line chart
             new Chart(buyers).Line(buyerData, {
 			scaleShowGridLines: false,
@@ -914,7 +926,7 @@ $output  = <<<HERE
 			});
 			
 			// get line chart canvas
-            var buyers2 = document.getElementById('buyers-2').getContext('2d');
+            var buyers2 = document.getElementById("buyers-2").getContext("2d");
             // draw line chart
             new Chart(buyers2).Line(buyerData, {
 			scaleShowGridLines: false,
@@ -952,7 +964,6 @@ $output  = <<<HERE
             new Chart(countries).Pie(pieData, pieOptions);
           
         </script>
-HERE;
 
-echo $output;
+'
 ?>

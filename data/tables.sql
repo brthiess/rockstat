@@ -60,6 +60,13 @@ FOREIGN KEY (OtherTeamID) REFERENCES Team(ID),
 PRIMARY KEY (ID)
 );
 
+CREATE TABLE ScoringFrequency (
+TeamID int not NULL,
+Hammer boolean,
+Score int,
+rate float
+)
+
 
 INSERT INTO Team VALUES(
 '',

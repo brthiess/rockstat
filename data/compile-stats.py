@@ -10,6 +10,16 @@ def isCurrentTeamHammerTeam(teamID, hammerTeamID, otherTeamID):
 		return 2
 	else:
 		print("Error.  Current Team is neither hammer team nor other team")
+#Is given an array of ends each with the score for the end	
+def getScoringFrequencies(ends):
+	frequencies = {-8: 0, -7: 0, -6: 0, -5: 0, -4: 0, -3: 0, -2: 0, -1: 0, 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6:0, 7:0, 8:0}
+	if (len(ends) == 0):
+		return frequencies
+	for e in range(0, len(ends)):
+		frequencies[ends[e]] += 1.0
+	for f in range(-8, 9):
+		frequencies[f] = frequencies[f]/len(ends)
+	return frequencies
 
 db = MySQLdb.connect(host="localhost", # your host, usually localhost
                      user="root", # your username
@@ -43,25 +53,48 @@ for id in range(0, len(teamIds)):
 		OUR_TEAM = isCurrentTeamHammerTeam(teamID, hammerTeamID, otherTeamID)
 		OPPONENT_TEAM = 3 - OUR_TEAM
 		for end in range(0, len(gameEnds)):					#Iterate through each end
-			hammerTeamScore = int(gameEnds[end][2])		
-			otherTeamScore = int(gameEnds[end][3])
+			if (teamWithHammerThisEnd == HAMMER_TEAM):
+				hammerTeamScore = int(gameEnds[end][2])		
+				nonHammerTeamScore = int(gameEnds[end][3])
+			else:
+				hammerTeamScore = int(gameEnds[end][3])		
+				nonHammerTeamScore = int(gameEnds[end][2])
+			#print("HammerTeamScore: " + str(hammerTeamScore))
+			#print("otherTeamScore: " + str(nonHammerTeamScore))
+			#print("OUR_TEAM: " + str(OUR_TEAM))
+			#print("OPPONENT_TEAM: " + str(OPPONENT_TEAM))
+			#print("End: " + str(end))
+			#print("Team With Hammer This End: " + str(teamWithHammerThisEnd))
+			#raw_input(" ")
 			if (teamWithHammerThisEnd == OUR_TEAM):			#Check to see if the team with hammer this end is our current team				
-				if (hammerTeamScore == 0 and otherTeamScore == 0):	#Blank End
+				if (hammerTeamScore == 0 and nonHammerTeamScore == 0):	#Blank End
 					hammerEnds.append(0)							#Append a blank
 				elif (hammerTeamScore != 0):						#Else check if our team scored
 					teamWithHammerThisEnd = OPPONENT_TEAM			#Flip which team has hammer
 					hammerEnds.append(hammerTeamScore)
 				else:
-					hammerEnds.append(-otherTeamScore)				#Else the other team scored.  Append the negative amount to ours
+					hammerEnds.append(-nonHammerTeamScore)				#Else the other team scored.  Append the negative amount to ours
 			else:								#Else the team with hammer this end is the opposition
-				if (hammerTeamScore == 0 and otherTeamScore == 0):	#Blank End
+				if (hammerTeamScore == 0 and nonHammerTeamScore == 0):	#Blank End
 					nonHammerEnds.append(0)
-				elif (hammerTeamScore != 0):						#Else Check if We Stole
-					nonHammerEnds.append(hammerTeamScore)
-				else:												#Else They scored with hammer
-					nonHammerEnds.append(-otherTeamScore)
-					teamWithHammerThisEnd = OUR_TEAM				#Flip Hammer to Our team since opponents just scored with hammer
-	print("Team ID: " + str(teamID))
-	print("Hammer Ends: " + str(hammerEnds))
-	print("Non Hammer Ends: " + str(nonHammerEnds))
-			
+				elif (hammerTeamScore != 0):						#Team with the hammer scored
+					nonHammerEnds.append(-hammerTeamScore)
+					teamWithHammerThisEnd = OUR_TEAM	
+				else:												#Else we stole
+					nonHammerEnds.append(nonHammerTeamScore)
+								#Flip Hammer to Our team since opponents just scored with hammer
+	#print("Team ID: " + str(teamID))
+	#print("Hammer Ends: " + str(hammerEnds))
+	#print("Non Hammer Ends: " + str(nonHammerEnds))
+	
+	#Get Frequencies:
+	print(teamID)
+	frequencies = getScoringFrequencies(hammerEnds)
+	for i in range (-8,9):
+		cur.execute("INSERT INTO ScoringFrequency VALUES ( " +\
+		str(teamID) + ", true, " + str(i) + ", " + str(frequencies[i]) + ")") 
+	frequencies = getScoringFrequencies(nonHammerEnds)
+	for i in range (-8,9):
+		cur.execute("INSERT INTO ScoringFrequency VALUES ( " +\
+		str(teamID) + ", false, " + str(i) + ", " + str(frequencies[i]) + ")") 
+db.commit()
