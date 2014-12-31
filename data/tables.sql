@@ -11,6 +11,31 @@ LeadFirst varchar(30),
 PRIMARY KEY (ID)
 );
 
+CREATE TABLE TeamStats(
+TeamID int NOT NULL,
+Wins int,
+Losses int,
+WinPercentage float,
+PFG float,
+PAG float,
+EventsPlayed int,
+EventsWon int,
+WinsWith int,
+WinsWithout int,
+LossesWith int,
+LossesWithout int,
+NetScoringWith float,
+NetScoringWithout float
+)
+
+CREATE TABLE EndByEndAvgScoring(
+TeamID int NOT NULL,
+EndNumber int,
+Hammer boolean,
+Average float
+)
+
+
 CREATE TABLE Player(
 FirstName varchar(30),
 LastName varchar(30)
@@ -64,7 +89,8 @@ CREATE TABLE ScoringFrequency (
 TeamID int not NULL,
 Hammer boolean,
 Score int,
-rate float
+rate float,
+TeamRank int
 )
 
 

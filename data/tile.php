@@ -5,7 +5,11 @@ $tile_name = filter_input(INPUT_POST, 'tile_name');
 $tile_player_team_name = explode("-", $tile_name);
 //Tile Type
 $tile_type = filter_input(INPUT_POST, 'tile_type');
+//Tile ID
+$tile_id = filter_input(INPUT_POST, 'tile_id');
+$tile_id = explode("-", $tile_id)[1];
 
+$tile_type_string;
 //Number of Games for Player or Team
 $num_games = 0;
 //All the games of the selected team(s)
@@ -30,38 +34,49 @@ try {
 														ThirdFirst = :first_name AND ThirdLast = :last_name OR
 														SecondFirst = :first_name AND SecondLast = :last_name OR
 														LeadFirst = :first_name AND LeadLast = :last_name");
+		$stmt->bindParam(':first_name', $tile_player_team_name[0]);
+		$stmt->bindParam(':last_name', $tile_player_team_name[1]);
+		$stmt->execute();
+		/**********************************
+		Get Teams that the Player has played on (or for team, get the team)
+		**********************************/
+		$team_ids = $stmt->fetchAll(PDO::FETCH_ASSOC);
+		$tile_type_string = 'Player';
 	}
 	else if ($tile_type == 'team') {
-		$stmt = $con->prepare("SELECT ID FROM Team Where SkipFirst = :first_name AND SkipLast = :last_name");
+		$stmt = $con->prepare("SELECT ID FROM Team Where ID = :tile_id");
+		$stmt->bindParam(':tile_id', $tile_id);
+		$stmt->execute();
+		$team_ids = $stmt->fetchAll(PDO::FETCH_ASSOC);
+		$tile_type_string = 'Team';
 	}
-	$stmt->bindParam(':first_name', $tile_player_team_name[0]);
-	$stmt->bindParam(':last_name', $tile_player_team_name[1]);
-	$stmt->execute();
-	/**********************************
-	Get Teams that the Player has played on (or for team, get the team)
-	**********************************/
-	$team_ids = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+
 
 	//Get all games
 	$getGames = $con->prepare("SELECT * FROM Game Where HammerTeamID = :ID OR OtherTeamID = :ID");
 	$getGames->bindParam(':ID', $id);
 	//Get Scoring Frequencies
-	$getFrequencies = $con->prepare("SELECT * FROM ScoringFrequency Where TeamID = :ID");
-	$getFrequencies->bindParam(':ID', $id);
+	$getHammerFrequencies = $con->prepare("SELECT * FROM ScoringFrequency Where TeamID = :ID AND Hammer=true");
+	$getHammerFrequencies->bindParam(':ID', $id);
+	$getNonHammerFrequencies = $con->prepare("SELECT * FROM ScoringFrequency Where TeamID = :ID AND Hammer=false");
+	$getNonHammerFrequencies->bindParam(':ID', $id);
 	for($i = 0; $i < count($team_ids); $i++) {
 		$id = $team_ids[$i]['ID'];
 		$getGames->execute();
 		$games = $getGames->fetchAll(PDO::FETCH_ASSOC);
-		$getFrequencies->execute();
-		$frequencies = $getFrequencies->fetchAll(PDO::FETCH_ASSOC);
+		$getHammerFrequencies->execute();
+		$hammerFrequencies = $getHammerFrequencies->fetchAll(PDO::FETCH_ASSOC);
+		$getNonHammerFrequencies->execute();
+		$nonHammerFrequencies = $getNonHammerFrequencies->fetchAll(PDO::FETCH_ASSOC);
 		$gameResults = array_merge($gameResults, $games);
 	}
 	$numGames = count($gameResults);
+
 }
 catch(PDOException $e){
 	echo 'ERROR:' . $e->getMessage();
 }
-
 
 echo '
         <!-- pie chart  canvas element -->
@@ -73,7 +88,7 @@ echo '
 				<img class="back-button-selected-img" src="tiles/back-button-selected.png">
 			</div>
 			<div class="col-sm-10 title-name">
-				Team: ' . $tile_player_team_name[0] . ' ' . $tile_player_team_name[1] . '
+				' . $tile_type_string . ': ' . $tile_player_team_name[0] . ' ' . $tile_player_team_name[1] . '
 			</div>
 		</div>
 		<div class="row row-centered">
@@ -102,7 +117,7 @@ echo '
 						Scoring Frequency
 					</div>
 					<div class="scoring-frequency-title-rank">
-						Rank
+						Rank <p>(All Time)</p>
 					</div>
 					<div class="scoring-frequency-title-img">
 						<img src="tiles/hammer-icon.png">
@@ -110,57 +125,68 @@ echo '
 				</div>
 				<div class="scoring-frequency-table">
 					<div class="table-entry">
-						<p>' . $frequencies[6]['rate'] . '</p>
+						<p>' . round(($hammerFrequencies[16]['rate'] +
+								$hammerFrequencies[15]['rate'] +
+								$hammerFrequencies[14]['rate'] +
+								$hammerFrequencies[13]['rate'] + 
+								$hammerFrequencies[12]['rate'] +
+								$hammerFrequencies[11]['rate'])*100,1) . '%</p>
 						<div class="scoring-indicator three">
 							3+
 						</div>
 						<div class="table-entry-rank-container">
-							<p>1<sup>st</sup></p>
+							<p>' . $hammerFrequencies[11]['TeamRank'] . '<sup>st</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">
-						<p>19.4%</p>
+						<p>' . round($hammerFrequencies[10]['rate']*100,1) . '%</p>
 						<div class="scoring-indicator two">
 							2
 						</div>
 						<div class="table-entry-rank-container">
-							<p>1<sup>st</sup></p>
+							<p>' . $hammerFrequencies[10]['TeamRank'] . '<sup>st</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">
-						<p>39.9%</p>
+						<p>' . round($hammerFrequencies[9]['rate']*100,1) . '%</p>
 						<div class="scoring-indicator one">
 							1
 						</div>
 						<div class="table-entry-rank-container">
-							<p>17<sup>th</sup></p>
+							<p>' . $hammerFrequencies[9]['TeamRank'] . '<sup>th</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">
-						<p>12.0%</p>
+						<p>' . round($hammerFrequencies[8]['rate']*100,1) . '%</p>
 						<div class="scoring-indicator blank">
 							0
 						</div>
 						<div class="table-entry-rank-container">
-							<p>5<sup>th</sup></p>
+							<p>' . $hammerFrequencies[8]['TeamRank'] . '<sup>th</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">
-						<p>11.4%</p>
+						<p>' . round($hammerFrequencies[7]['rate']*100,1) . '%</p>
 						<div class="scoring-indicator minus-one">
 							-1
 						</div>
 						<div class="table-entry-rank-container">
-							<p>2<sup>nd</sup></p>
+							<p>' . $hammerFrequencies[7]['TeamRank'] . '<sup>nd</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">
-						<p>6.9%</p>
+						<p>' . round(($hammerFrequencies[6]['rate'] +
+								$hammerFrequencies[5]['rate'] +
+								$hammerFrequencies[4]['rate'] +
+								$hammerFrequencies[3]['rate'] + 
+								$hammerFrequencies[2]['rate'] +
+								$hammerFrequencies[1]['rate'] +
+								$hammerFrequencies[0]['rate'])*100,1) . '%</p>
 						<div class="scoring-indicator minus-two">
 							-2+
 						</div>
 						<div class="table-entry-rank-container">
-							<p>1<sup>st</sup></p>
+							<p>' . $hammerFrequencies[6]['TeamRank'] . '<sup>st</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">
@@ -183,62 +209,73 @@ echo '
 						<img src="tiles/hammer-icon-not.png">
 					</div>
 					<div class="scoring-frequency-title-rank">
-						Rank
+						Rank <p>(All Time)</p>
 					</div>
 				</div>
 				<div class="scoring-frequency-table">
 										<div class="table-entry">
-						<p>11.4%</p>
+						<p>' . round(($nonHammerFrequencies[16]['rate'] +
+								$nonHammerFrequencies[15]['rate'] +
+								$nonHammerFrequencies[14]['rate'] +
+								$nonHammerFrequencies[13]['rate'] + 
+								$nonHammerFrequencies[12]['rate'] +
+								$nonHammerFrequencies[11]['rate'] +
+								$nonHammerFrequencies[10]['rate'])*100,1) . '%</p>
 						<div class="scoring-indicator three">
 							2+
 						</div>
 						<div class="table-entry-rank-container">
-							<p>99<sup>th</sup></p>
+							<p>' . $hammerFrequencies[10]['TeamRank'] . '<sup>th</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">
-						<p>19.4%</p>
+						<p>' . round($nonHammerFrequencies[9]['rate']*100,1) . '%</p>
 						<div class="scoring-indicator two">
 							1
 						</div>
 						<div class="table-entry-rank-container">
-							<p>21<sup>st</sup></p>
+							<p>' . $hammerFrequencies[9]['TeamRank'] . '<sup>st</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">
-						<p>39.9%</p>
+						<p>' . round($nonHammerFrequencies[8]['rate']*100,1) . '%</p>
 						<div class="scoring-indicator one">
 							0
 						</div>
 						<div class="table-entry-rank-container">
-							<p>5<sup>th</sup></p>
+							<p>' . $hammerFrequencies[8]['TeamRank'] . '<sup>th</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">
-						<p>12.0%</p>
+						<p>' . round($nonHammerFrequencies[7]['rate']*100,1) . '%</p>
 						<div class="scoring-indicator blank">
 							-1
 						</div>
 						<div class="table-entry-rank-container">
-							<p>1<sup>st</sup></p>
+							<p>' . $hammerFrequencies[7]['TeamRank'] . '<sup>st</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">
-						<p>11.4%</p>
+						<p>' . round($nonHammerFrequencies[6]['rate']*100,1) . '%</p>
 						<div class="scoring-indicator minus-one">
 							-2
 						</div>
 						<div class="table-entry-rank-container">
-							<p>1<sup>st</sup></p>
+							<p>' . $hammerFrequencies[6]['TeamRank'] . '<sup>st</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">
-						<p>6.9%</p>
+						<p>' . round(($nonHammerFrequencies[5]['rate'] +
+								$nonHammerFrequencies[4]['rate'] +
+								$nonHammerFrequencies[3]['rate'] + 
+								$nonHammerFrequencies[2]['rate'] +
+								$nonHammerFrequencies[1]['rate'] +
+								$nonHammerFrequencies[0]['rate'])*100,1) . '%</p>
 						<div class="scoring-indicator minus-three">
 							-3+
 						</div>
 						<div class="table-entry-rank-container">
-							<p>1<sup>st</sup></p>
+							<p>' . $hammerFrequencies[5]['TeamRank'] . '<sup>st</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">

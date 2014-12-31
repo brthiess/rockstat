@@ -93,7 +93,7 @@ try {
 		}
 		if ($row["Type"] == $PLAYER){
 			if ($row["Similarity"] <= 2) {
-				echo "<div class='col-sm-2 col-centered tile player " .  $row['FirstName'] . "-" . $row["LastName"] . "'>
+				echo "<div class='col-sm-2 col-centered tile player " .  $row['FirstName'] . "-" . $row["LastName"] . " id-p'>
 					<a class='tile-link' href='#results-container'></a>
 						<div class='tile-logo'>
 							<img src='tiles/player-icon.png'>
@@ -110,7 +110,7 @@ try {
 		
 		else if ($row["Type"] == $TEAM) {
 			if ($row["Similarity"] <= 2){
-				echo "<div class='col-sm-2 col-centered tile team " . $row["SkipFirst"] . "-" . $row["SkipLast"] . "'>
+				echo "<div class='col-sm-2 col-centered tile team " . $row["SkipFirst"] . "-" . $row["SkipLast"] . " id-" . $row["ID"] . "'>
 					<a class='tile-link' href='#results-container'></a>
 						<div class='tile-logo'>
 							<img src='tiles/team-icon.png'>

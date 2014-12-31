@@ -105,13 +105,14 @@ function showTile(tile_class){
 	var tile = tile_class.split(" ");
 	var tile_type = tile[3];
 	var tile_name = tile[4];
+	var tile_id = tile[5];
 	
 	$.getScript("data/Chart.min.js", function(data, textStatus, jqxhr) {
 		console.log("Load was performed");	
 		$.ajax({
 			type:"post",
 			url:"data/tile.php",
-			data:{"tile_type": tile_type, "tile_name": tile_name},
+			data:{"tile_type": tile_type, "tile_name": tile_name, "tile_id": tile_id},
 			success:function(data){
 				spinner.stop();
 				$("#chart-container").html(data);

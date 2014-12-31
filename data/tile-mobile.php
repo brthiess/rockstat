@@ -8,7 +8,7 @@ try {
 	*******************/
 	$con = new PDO('mysql:host=localhost;dbname=rockstat', "root", "jikipol");
 	$con->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-	//
+	
 	$player_results = array();
 	$stmt = $con->prepare("SELECT ID FROM Team Where SkipFirst = :first_name AND SkipLast = :last_name OR
 													ThirdFirst = :first_name AND ThirdLast = :last_name OR
