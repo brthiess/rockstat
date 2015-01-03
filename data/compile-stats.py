@@ -29,7 +29,8 @@ def compileScoringFrequencies():
 	Hammer boolean,\
 	Score int,\
 	rate float,\
-	TeamRank int\
+	TeamRank int,\
+	FOREIGN KEY (TeamID) REFERENCES Team(ID)\
 	)")
 	cur.execute("SELECT ID FROM TEAM")
 	teamIds = cur.fetchall()
@@ -79,7 +80,16 @@ def compileScoringFrequencies():
 						teamWithHammerThisEnd = OUR_TEAM	
 					else:												#Else we stole
 						nonHammerEnds.append(nonHammerTeamScore)
-									
+		#Get Net Scoring Per End With and Without Hammer
+		try:
+			netHammerAvg = sum(hammerEnds)*1.0/len(hammerEnds)
+		except:
+			netHammerAvg = 0
+		try:
+			netNonHammerAvg = sum(nonHammerEnds)*1.0/len(nonHammerEnds)
+		except:
+			netNonHammerAvg = 0
+		cur.execute("UPDATE Team SET NetScoringWith=" + str(netHammerAvg) + ", NetScoringWithout=" + str(netNonHammerAvg) + " WHERE ID=" + str(teamID))
 		#Get Frequencies:
 		print(teamID)
 		frequencies = getScoringFrequencies(hammerEnds)
@@ -96,10 +106,10 @@ def compileScoringFrequencies():
 	for i in range(-8,9):
 		print("Done One");
 		#cur.execute("SELECT Team.id, COUNT(*) c FROM Team, Game WHERE Team.ID = Game.HammerTeamID OR Team.ID = Game.OtherTeamID Group by team.id having c > 30")
-		cur.execute("SELECT * FROM ScoringFrequency WHERE Score = " + str(i) + " AND Hammer = True AND TeamID IN (SELECT Team.id FROM Team, Game WHERE Team.ID = Game.HammerTeamID OR Team.ID = Game.OtherTeamID Group by team.id having COUNT(*) > 30) ");
+		cur.execute("SELECT ScoringFrequency.TeamID, ScoringFrequency.Hammer, ScoringFrequency.Score, ScoringFrequency.rate, ScoringFrequency.TeamRank FROM ScoringFrequency, Team WHERE ScoringFrequency.TeamID=Team.ID AND ScoringFrequency.Score = " + str(i) + " AND ScoringFrequency.Hammer = True AND Team.Games >= 30 ORDER BY ScoringFrequency.rate DESC");
 		print("Done")
 		scoringFrequenciesHammer = cur.fetchall()
-		cur.execute("SELECT * FROM ScoringFrequency WHERE Score = " + str(i) + " AND Hammer = False AND TeamID IN (SELECT Team.id FROM Team, Game WHERE Team.ID = Game.HammerTeamID OR Team.ID = Game.OtherTeamID Group by team.id having COUNT(*) > 30) ");
+		cur.execute("SELECT ScoringFrequency.TeamID, ScoringFrequency.Hammer, ScoringFrequency.Score, ScoringFrequency.rate, ScoringFrequency.TeamRank FROM ScoringFrequency, Team WHERE ScoringFrequency.TeamID=Team.ID AND ScoringFrequency.Score = " + str(i) + " AND ScoringFrequency.Hammer = False AND Team.Games >= 30 ORDER BY ScoringFrequency.rate DESC");
 		print("Done")
 		scoringFrequenciesNonHammer = cur.fetchall()
 		for s in range(0, len(scoringFrequenciesHammer)):
@@ -114,14 +124,14 @@ def compileScoringFrequencies():
 
 class TeamStats:
 
-	def __init__(self, id, games=0, wins=0, losses=0, tpf=0, tpa=0, eventsPlayed=[], eventsWon=0, winsWith=0, winsWithout=0, lossesWith=0, lossesWithout=0):
+	def __init__(self, id, games=0, wins=0, losses=0, tpf=0, tpa=0, eventsWon=0, winsWith=0, winsWithout=0, lossesWith=0, lossesWithout=0):
 		self.id = id
 		self.games = games
 		self.wins = wins
 		self.losses = losses 
 		self.tpf = tpf
 		self.tpa = tpa 
-		self.eventsPlayed = eventsPlayed
+		self.eventsPlayed = []
 		self.eventsWon = eventsWon
 		self.winsWith = winsWith
 		self.winsWithout = winsWithout 
@@ -129,6 +139,17 @@ class TeamStats:
 		self.lossesWithout = lossesWithout 
 		if (self.games > 0):
 			self.winPercentage = self.wins*1.0/self.games
+			self.pfg = self.tpf*1.0/self.games
+			self.pag = self.tpa*1.0/self.games
+		else:
+			self.winPercentage = 0
+			self.pfg = 0
+			self.pag = 0
+		
+	def appendEvent(self, event):
+		self.eventsPlayed.append(event)
+		self.eventsPlayed = list(set(self.eventsPlayed))	#Removes Duplicate Entries
+
 
 #Is given a game from sql table and returns the stats for that game in python dictionary form
 def getGameStats(g):
@@ -160,11 +181,8 @@ def getGameStats(g):
 		winnerID = otherID
 		loserID = hammerID
 	else:
-		print("Tie!")		#Shouldn't have ties (I don't think?)
-		print (g)
 		cur.execute("SELECT * FROM EndScore Where Game=" + str(gameID) + " ORDER BY EndNumber ASC")
 		ends = cur.fetchall()
-		print(ends)
 		return None
 	#Create Dictionary
 	return {'winnerID': winnerID, 'loserID': loserID, 'winnerTPF': winnerTPF, 'winnerTPA': winnerTPA, 'loserTPF': winnerTPA, 'loserTPA': winnerTPF, 'event': event} 
@@ -193,7 +211,7 @@ def compileNetScoring():
 		#Append win (and wins with or without) to winner and loss to loser, add events played, tpf, tpa
 		winnerID = gameStats['winnerID']
 		loserID = gameStats['loserID']	
-
+		
 		hammerID = allGames[g][2]
 		otherID = allGames[g][3]
 		
@@ -201,7 +219,7 @@ def compileNetScoring():
 		teamStats[winnerID].wins += 1
 		teamStats[winnerID].tpf += gameStats['winnerTPF']
 		teamStats[winnerID].tpa += gameStats['winnerTPA']
-		teamStats[winnerID].eventsPlayed.append(gameStats['event'])
+		teamStats[winnerID].appendEvent(gameStats['event'])
 		
 		if (winnerID == hammerID):
 			teamStats[winnerID].winsWith += 1
@@ -214,11 +232,27 @@ def compileNetScoring():
 		teamStats[loserID].losses += 1
 		teamStats[loserID].tpf += gameStats['loserTPF']
 		teamStats[loserID].tpa += gameStats['loserTPA']
-		teamStats[loserID].eventsPlayed.append(gameStats['event'])
+		teamStats[loserID].appendEvent(gameStats['event'])
 	
-	#TODO: Add entire teamStats dictionary to sql
-	
+	for t in teamStats:
+		team = TeamStats(teamStats[t].id, teamStats[t].games, teamStats[t].wins, teamStats[t].losses, teamStats[t].tpf, teamStats[t].tpa, teamStats[t].eventsWon, teamStats[t].winsWith, teamStats[t].winsWithout, teamStats[t].lossesWith, teamStats[t].lossesWithout)
 		
+		cur.execute("UPDATE Team SET \
+					Games=" + str(team.games) + ",\
+					Wins=" + str(team.wins) +", \
+					Losses=" + str(team.losses) +", \
+					WinPercentage=" + str(team.winPercentage) +", \
+					PFG=" + str(team.pfg) +", \
+					PAG=" + str(team.pag) +", \
+					EventsPlayed=" + str(0) +", \
+					EventsWon=" + str(0) +", \
+					WinsWith=" + str(team.winsWith) +", \
+					WinsWithout=" + str(team.winsWithout) +", \
+					LossesWith=" + str(team.lossesWith) +", \
+					LossesWithout=" + str(team.lossesWithout) +" \
+					WHERE Team.ID = " + str(team.id) +" \
+					")
+	db.commit()
 	
 
 #Connect To Database
@@ -228,6 +262,9 @@ db = MySQLdb.connect(host="localhost", # your host, usually localhost
                       db="rockstat") # name of the data base
 					  
 cur = db.cursor()
-#Get All Team IDs
-#compileScoringFrequencies()
+
+print("0%")
 compileNetScoring()
+print("\b\b50%")
+compileScoringFrequencies()
+print("\b\b\b100%")

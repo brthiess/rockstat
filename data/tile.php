@@ -30,17 +30,16 @@ try {
 	Check For Tile Type
 	******************/
 	if ($tile_type == 'player') {
-		$stmt = $con->prepare("SELECT ID FROM Team Where SkipFirst = :first_name AND SkipLast = :last_name OR
-														ThirdFirst = :first_name AND ThirdLast = :last_name OR
-														SecondFirst = :first_name AND SecondLast = :last_name OR
-														LeadFirst = :first_name AND LeadLast = :last_name");
-		$stmt->bindParam(':first_name', $tile_player_team_name[0]);
-		$stmt->bindParam(':last_name', $tile_player_team_name[1]);
+		$stmt = $con->prepare("SELECT TeamID FROM PlayerTeam Where PlayerID = :tile_id");
+		$stmt->bindParam(':tile_id', $tile_id);
 		$stmt->execute();
 		/**********************************
 		Get Teams that the Player has played on (or for team, get the team)
 		**********************************/
 		$team_ids = $stmt->fetchAll(PDO::FETCH_ASSOC);
+		for($i = 0; $i < count($team_ids); $i++) {
+			$team_ids[$i]["ID"] = $team_ids[$i]["TeamID"];	//Make it compatible with code below.  Column has to be named 'ID' not 'TeamID'
+		}
 		$tile_type_string = 'Player';
 	}
 	else if ($tile_type == 'team') {
@@ -225,7 +224,7 @@ echo '
 							2+
 						</div>
 						<div class="table-entry-rank-container">
-							<p>' . $hammerFrequencies[10]['TeamRank'] . '<sup>th</sup></p>
+							<p>' . $nonHammerFrequencies[10]['TeamRank'] . '<sup>th</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">
@@ -234,7 +233,7 @@ echo '
 							1
 						</div>
 						<div class="table-entry-rank-container">
-							<p>' . $hammerFrequencies[9]['TeamRank'] . '<sup>st</sup></p>
+							<p>' . $nonHammerFrequencies[9]['TeamRank'] . '<sup>st</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">
@@ -243,7 +242,7 @@ echo '
 							0
 						</div>
 						<div class="table-entry-rank-container">
-							<p>' . $hammerFrequencies[8]['TeamRank'] . '<sup>th</sup></p>
+							<p>' . $nonHammerFrequencies[8]['TeamRank'] . '<sup>th</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">
@@ -252,7 +251,7 @@ echo '
 							-1
 						</div>
 						<div class="table-entry-rank-container">
-							<p>' . $hammerFrequencies[7]['TeamRank'] . '<sup>st</sup></p>
+							<p>' . $nonHammerFrequencies[7]['TeamRank'] . '<sup>st</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">
@@ -261,7 +260,7 @@ echo '
 							-2
 						</div>
 						<div class="table-entry-rank-container">
-							<p>' . $hammerFrequencies[6]['TeamRank'] . '<sup>st</sup></p>
+							<p>' . $nonHammerFrequencies[6]['TeamRank'] . '<sup>st</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">
