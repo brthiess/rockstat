@@ -37,6 +37,7 @@ try {
 		Get Teams that the Player has played on (or for team, get the team)
 		**********************************/
 		$team_ids = $stmt->fetchAll(PDO::FETCH_ASSOC);
+		//$player_stats = getPlayerStats($team_ids);
 		for($i = 0; $i < count($team_ids); $i++) {
 			$team_ids[$i]["ID"] = $team_ids[$i]["TeamID"];	//Make it compatible with code below.  Column has to be named 'ID' not 'TeamID'
 		}
@@ -47,28 +48,66 @@ try {
 		$stmt->bindParam(':tile_id', $tile_id);
 		$stmt->execute();
 		$team_ids = $stmt->fetchAll(PDO::FETCH_ASSOC);
+		//getTeamStats($team_ids);
 		$tile_type_string = 'Team';
 	}
-
 
 
 	//Get all games
 	$getGames = $con->prepare("SELECT * FROM Game Where HammerTeamID = :ID OR OtherTeamID = :ID");
 	$getGames->bindParam(':ID', $id);
+	
 	//Get Scoring Frequencies
 	$getHammerFrequencies = $con->prepare("SELECT * FROM ScoringFrequency Where TeamID = :ID AND Hammer=true");
 	$getHammerFrequencies->bindParam(':ID', $id);
+	
 	$getNonHammerFrequencies = $con->prepare("SELECT * FROM ScoringFrequency Where TeamID = :ID AND Hammer=false");
 	$getNonHammerFrequencies->bindParam(':ID', $id);
+	
+	$setRowNum = $con->prepare("SET @row_num = 0;");
+	$getNetScoringHammer = $con->prepare("SELECT Rank, NetScoringWith FROM (SELECT @row_num := @row_num + 1 as Rank, ID, NetScoringWith FROM Team WHERE Games >= 30 ORDER BY NetScoringWith DESC) As Result WHERE ID = :ID");
+	$getNetScoringHammer->bindParam(':ID', $id);
+	$netScoringWithAvg = 0;
+	
+
+	$getNetScoringNonHammer = $con->prepare("SELECT Rank, NetScoringWithout FROM (SELECT @row_num := @row_num + 1 as Rank, ID, NetScoringWithout FROM Team WHERE Games >= 30 ORDER BY NetScoringWithout DESC) As Result WHERE ID = :ID");
+	$getNetScoringNonHammer->bindParam(':ID', $id);
+	$netScoringWithoutAvg = 0;
+	
 	for($i = 0; $i < count($team_ids); $i++) {
 		$id = $team_ids[$i]['ID'];
+		//Get Games
 		$getGames->execute();
 		$games = $getGames->fetchAll(PDO::FETCH_ASSOC);
+		$gameResults = array_merge($gameResults, $games);
+		
 		$getHammerFrequencies->execute();
 		$hammerFrequencies = $getHammerFrequencies->fetchAll(PDO::FETCH_ASSOC);
+		
 		$getNonHammerFrequencies->execute();
 		$nonHammerFrequencies = $getNonHammerFrequencies->fetchAll(PDO::FETCH_ASSOC);
-		$gameResults = array_merge($gameResults, $games);
+		
+		$setRowNum->execute();
+		
+		$getNetScoringHammer->execute();
+		$netScoringWith = $getNetScoringHammer->fetchAll(PDO::FETCH_ASSOC);
+		if (count($netScoringWith) > 0) {	//If Results are non-empty
+			$netScoringWithAvg = $netScoringWithAvg + 1/($i+1)*($netScoringWith[0]["NetScoringWith"] - $netScoringWithAvg);
+		}
+		else {
+			$netScoringWith[0]["Rank"] = "N/A";
+		}
+		
+		$setRowNum->execute();
+
+		$getNetScoringNonHammer->execute();
+		$netScoringWithout = $getNetScoringNonHammer->fetchAll(PDO::FETCH_ASSOC);
+		if (count($netScoringWithout) > 0) {
+			$netScoringWithoutAvg = $netScoringWithoutAvg + 1/($i+1)*($netScoringWithout[0]["NetScoringWithout"] - $netScoringWithoutAvg);
+		}
+		else {
+			$netScoringWithout[0]["Rank"] = "N/A";
+		}
 	}
 	$numGames = count($gameResults);
 
@@ -134,7 +173,7 @@ echo '
 							3+
 						</div>
 						<div class="table-entry-rank-container">
-							<p>' . $hammerFrequencies[11]['TeamRank'] . '<sup>st</sup></p>
+							<p>' . $hammerFrequencies[11]['TeamRank'] . '<sup>th</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">
@@ -143,7 +182,7 @@ echo '
 							2
 						</div>
 						<div class="table-entry-rank-container">
-							<p>' . $hammerFrequencies[10]['TeamRank'] . '<sup>st</sup></p>
+							<p>' . $hammerFrequencies[10]['TeamRank'] . '<sup>th</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">
@@ -170,7 +209,7 @@ echo '
 							-1
 						</div>
 						<div class="table-entry-rank-container">
-							<p>' . $hammerFrequencies[7]['TeamRank'] . '<sup>nd</sup></p>
+							<p>' . $hammerFrequencies[7]['TeamRank'] . '<sup>th</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">
@@ -185,16 +224,16 @@ echo '
 							-2+
 						</div>
 						<div class="table-entry-rank-container">
-							<p>' . $hammerFrequencies[6]['TeamRank'] . '<sup>st</sup></p>
+							<p>' . $hammerFrequencies[6]['TeamRank'] . '<sup>th</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">
-						<p>+.83</p>
+						<p>' . round($netScoringWithAvg, 1) . '</p>
 						<div class="scoring-indicator net">
 							<p>Net</p>
 						</div>
 						<div class="table-entry-rank-container">
-							<p>1<sup>st</sup></p>
+							<p>' . $netScoringWith[0]["Rank"] . '<sup>th</sup></p>
 						</div>
 					</div>
 				</div>
@@ -233,7 +272,7 @@ echo '
 							1
 						</div>
 						<div class="table-entry-rank-container">
-							<p>' . $nonHammerFrequencies[9]['TeamRank'] . '<sup>st</sup></p>
+							<p>' . $nonHammerFrequencies[9]['TeamRank'] . '<sup>th</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">
@@ -251,7 +290,7 @@ echo '
 							-1
 						</div>
 						<div class="table-entry-rank-container">
-							<p>' . $nonHammerFrequencies[7]['TeamRank'] . '<sup>st</sup></p>
+							<p>' . $nonHammerFrequencies[7]['TeamRank'] . '<sup>th</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">
@@ -260,7 +299,7 @@ echo '
 							-2
 						</div>
 						<div class="table-entry-rank-container">
-							<p>' . $nonHammerFrequencies[6]['TeamRank'] . '<sup>st</sup></p>
+							<p>' . $nonHammerFrequencies[6]['TeamRank'] . '<sup>th</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">
@@ -274,16 +313,16 @@ echo '
 							-3+
 						</div>
 						<div class="table-entry-rank-container">
-							<p>' . $hammerFrequencies[5]['TeamRank'] . '<sup>st</sup></p>
+							<p>' . $hammerFrequencies[5]['TeamRank'] . '<sup>th</sup></p>
 						</div>
 					</div>
 					<div class="table-entry">
-						<p>+.83</p>
+						<p>' . round($netScoringWithoutAvg, 2) . '</p>
 						<div class="scoring-indicator net">
 							<p>Net<p>
 						</div>
 						<div class="table-entry-rank-container">
-							<p>2<sup>nd</sup></p>
+							<p>' . $netScoringWithout[0]["Rank"] . '<sup>th</sup></p>
 						</div>
 					</div>
 				</div>
