@@ -10,12 +10,9 @@ $tile_id = filter_input(INPUT_POST, 'tile_id');
 $tile_id = explode("-", $tile_id)[1];
 
 $tile_type_string;
-//Number of Games for Player or Team
-$num_games = 0;
-//All the games of the selected team(s)
-$gameResults = array();
-//Scoring frequencies of selected team(s)
-$frequencies = array();
+//$teamStats array
+$teamStats;
+
 
 try {
 	/***********************************
@@ -41,7 +38,7 @@ try {
 		//For Each Team that the player has played on, get its team stats
 		$allTeamStats = array();
 		for($i = 0; $i < count($team_ids); $i++) {
-			$teamStats = getTeamStats($team_ids[$i]["TeamID"];
+			$teamStats = getTeamStats($team_ids[$i]["TeamID"]);
 			array_push($allTeamStats, $teamStats);
 		}
 
@@ -50,7 +47,7 @@ try {
 		$tile_type_string = 'Team';
 		
 		//Get Teams Stats
-		getTeamStats($tile_id);
+		$teamStats = getTeamStats($tile_id, $con);
 	}
 
 
@@ -63,9 +60,9 @@ catch(PDOException $e){
 /**
 Given a Team ID and returns an associative array with relevant stats
 Returns
-Array{numGames, wins, losses, ... , netScoringWith, netScoringWithout, LeadFirstName, LeadLastName, ... , EBEAvgScoringWith[], EBEAvgScoringWithout[], ScoringFrequencyWith[], ScoringFrequencyWithout[]} 
+Array{numGames, wins, losses, ... , netScoringWith, netScoringWithout, playerNames[Position][First or Last Name], ... , EBEAvgScoringWith[], EBEAvgScoringWithout[], ScoringFrequencyWith[], ScoringFrequencyWithout[]} 
 */
-function getTeamStats($team_id) {
+function getTeamStats($team_id, $con) {
 	
 	$teamStats = array();
 
@@ -76,27 +73,27 @@ function getTeamStats($team_id) {
 	
 	$teamStats = addMainStats($teamStats, $mainStats);
 	
-	$getPlayerNames = $con->prepare("SELECT * FROM PlayerTeam, PlayerWHERE Player.ID = PlayerTeam.PlayerID AND TeamID = :ID ORDER BY Position ASC");
+	$getPlayerNames = $con->prepare("SELECT * FROM PlayerTeam, Player WHERE Player.ID = PlayerTeam.PlayerID AND TeamID = :ID ORDER BY Position ASC");
 	$getPlayerNames->bindParam(':ID', $team_id);
 	$getPlayerNames->execute();
 	$playerNames = $getPlayerNames->fetchAll(PDO::FETCH_ASSOC);
 	
 	$teamStats = addPlayerNames($teamStats, $playerNames);
-	
-	$getEBEAvgScoring = $con->prepare("SELECT * FROM EndByEndAvgScoring WHERE TeamID = :ID");
+
+	$getEBEAvgScoring = $con->prepare("SELECT * FROM EndByEndAvgScoring WHERE TeamID = :ID ORDER BY Hammer, EndNumber ASC");
 	$getEBEAvgScoring->bindParam(':ID', $team_id);
 	$getEBEAvgScoring->execute();
 	$EBEAvgScoring = $getEBEAvgScoring->fetchAll(PDO::FETCH_ASSOC);
 	
 	$teamStats = addEBE($teamStats, $EBEAvgScoring);
 	
-	$getfrequencies = $con->prepare("SELECT * FROM ScoringFrequency Where TeamID = :ID");
-	$getfrequencies->bindParam(':ID', $id);
+	$getfrequencies = $con->prepare("SELECT * FROM ScoringFrequency Where TeamID = :ID ORDER BY Score, Hammer ASC");
+	$getfrequencies->bindParam(':ID', $team_id);
 	$getfrequencies->execute();
 	$frequencies = $getfrequencies->fetchAll(PDO::FETCH_ASSOC);
 	
-	$teamStats = addFrequencies($teamStats, $Frequencies);
-	
+	$teamStats = addFrequencies($teamStats, $frequencies);
+
 	return $teamStats;
 }
 /**
@@ -110,7 +107,7 @@ function addMainStats($teamStats, $mainStats){
 	$teamStats["pfg"] = $mainStats[0]["PFG"];
 	$teamStats["pag"] = $mainStats[0]["PAG"];
 	$teamStats["eventsPlayed"] = $mainStats[0]["EventsPlayed"];
-	$teamStats["eventsWon"] = $mainStats[0]["eventsWon"];
+	$teamStats["eventsWon"] = $mainStats[0]["EventsWon"];
 	$teamStats["winsWith"] = $mainStats[0]["WinsWith"];
 	$teamStats["winsWithout"] = $mainStats[0]["WinsWithout"];
 	$teamStats["lossesWith"] = $mainStats[0]["LossesWithout"];
@@ -124,6 +121,19 @@ function addMainStats($teamStats, $mainStats){
 }
 
 function addEBE($teamStats, $EBE){
+	$EBEAvgScoringWith = array();
+	$EBEAvgScoringWithout = array();
+	
+	for($i = 0; $i < count($EBE); $i++){
+		if($EBE[$i]["Hammer"] == 1) {
+			$EBEAvgScoringWith[$EBE[$i]["EndNumber"]] = $EBE[$i]["Average"];
+		}
+		else {
+			$EBEAvgScoringWithout[$EBE[$i]["EndNumber"]] = $EBE[$i]["Average"];
+		}
+	}
+	$teamStats["EBEAvgScoringWith"] = $EBEAvgScoringWith;
+	$teamStats["EBEAvgScoringWithout"] = $EBEAvgScoringWithout;
 	return $teamStats;
 }
 
@@ -131,12 +141,17 @@ function addFrequencies($teamStats, $frequencies) {
 	$hammerFrequencies = array();
 	$nonHammerFrequencies = array();
 	
+	$h = -8;
+	$nh = -8;
+	
 	for($i = 0; $i < count($frequencies); $i++){
-		if ($frequencies[$i]["Hammer"] = True) {
-			array_push($hammerFrequencies, $frequencies[$i]["Rate"]);
+		if ($frequencies[$i]["Hammer"] == True) {
+			$hammerFrequencies[$h] = $frequencies[$i]["rate"];
+			$h += 1;
 		}
 		else {
-			array_push($nonHammerFrequencies, $frequencies[$i]["Rate"]);
+			$nonHammerFrequencies[$h] = $frequencies[$i]["rate"];
+			$nh += 1;
 		}
 	}
 	$teamStats["hammerFrequencies"] = $hammerFrequencies;
@@ -151,10 +166,14 @@ function addPlayerNames($teamStats, $playerNames) {
 	//Iterate through each player, adding their name array to the teamNamesArray
 	for($i = 0; $i<4; $i++) {
 		$nameArray = array();
+		array_push($nameArray, $playerNames[$i]["FirstName"]);
+		array_push($nameArray, $playerNames[$i]["LastName"]);
+		array_push($teamNamesArray, $playerNames);
 	}
-	
-	$teamStats["playerNames"] = $nameArray;
+	$teamStats["names"] = $teamNamesArray;
+	return $teamStats;
 }
+
 echo '
         <!-- pie chart  canvas element -->
 		<div class="row">
@@ -170,14 +189,14 @@ echo '
 		</div>
 		<div class="row row-centered">
 			<div class="col-sm-6 big-tile game-wins col-centered">
-				<div class="num-of-games">' . $numGames . ' Games</div>
-				<div class="num-stats">423 Wins | 177 Losses | 78% Win Percentage</div>
-				<div class="points-per-game">6.5 Points For / Game | 3.4 Points Against / Game</div>
-				<div class="events-played">67 Events Played | 7 Events Won</div>
+				<div class="num-of-games">' . $teamStats["numGames"] . ' Games</div>
+				<div class="num-stats">' . $teamStats["wins"] . ' Wins | ' . $teamStats["losses"] . ' Losses | ' . round($teamStats["winPercentage"]*100,0) . '% Win Percentage</div>
+				<div class="points-per-game">' . round($teamStats["pfg"],2) . ' Points For / Game | ' . round($teamStats["pag"],2) . ' Points Against / Game</div>
+				<div class="events-played">' . $teamStats["eventsPlayed"] . ' Events Played | ' . $teamStats["eventsWon"] . ' Events Won</div>
 			</div>
 			<div class="col-sm-6 big-tile game-stats col-centered">
 				<div class="pie-chart-container">
-					<canvas id="countries" width="230" height="230"></canvas>
+					<canvas id="teamWins" width="230" height="230"></canvas>
 				</div>
 				<div class="vertical-divider"><img src="tiles/vertical_divider.png"></div>
 				<div class="legend-pie-title">Game Stats</div>
@@ -193,86 +212,62 @@ echo '
 					<div class="scoring-frequency-title-text">
 						Scoring Frequency
 					</div>
-					<div class="scoring-frequency-title-rank">
-						Rank <p>(All Time)</p>
-					</div>
 					<div class="scoring-frequency-title-img">
 						<img src="tiles/hammer-icon.png">
 					</div>
 				</div>
 				<div class="scoring-frequency-table">
 					<div class="table-entry">
-						<p>' . round(($hammerFrequencies[16]['rate'] +
-								$hammerFrequencies[15]['rate'] +
-								$hammerFrequencies[14]['rate'] +
-								$hammerFrequencies[13]['rate'] + 
-								$hammerFrequencies[12]['rate'] +
-								$hammerFrequencies[11]['rate'])*100,1) . '%</p>
+						<p>' . round($teamStats["hammerFrequencies"][8]*100 +
+								$teamStats["hammerFrequencies"][7]*100 +
+								$teamStats["hammerFrequencies"][6]*100 +
+								$teamStats["hammerFrequencies"][5]*100 +
+								$teamStats["hammerFrequencies"][4]*100 +
+								$teamStats["hammerFrequencies"][3]*100,1) . '%</p>
 						<div class="scoring-indicator three">
 							3+
 						</div>
-						<div class="table-entry-rank-container">
-							<p>' . $hammerFrequencies[11]['TeamRank'] . '<sup>th</sup></p>
-						</div>
 					</div>
 					<div class="table-entry">
-						<p>' . round($hammerFrequencies[10]['rate']*100,1) . '%</p>
+						<p>' . round($teamStats["hammerFrequencies"][2]*100,1) . '%</p>
 						<div class="scoring-indicator two">
 							2
 						</div>
-						<div class="table-entry-rank-container">
-							<p>' . $hammerFrequencies[10]['TeamRank'] . '<sup>th</sup></p>
-						</div>
 					</div>
 					<div class="table-entry">
-						<p>' . round($hammerFrequencies[9]['rate']*100,1) . '%</p>
+						<p>' . round($teamStats["hammerFrequencies"][1]*100,1) . '%</p>
 						<div class="scoring-indicator one">
 							1
 						</div>
-						<div class="table-entry-rank-container">
-							<p>' . $hammerFrequencies[9]['TeamRank'] . '<sup>th</sup></p>
-						</div>
 					</div>
 					<div class="table-entry">
-						<p>' . round($hammerFrequencies[8]['rate']*100,1) . '%</p>
+						<p>' . round($teamStats["nonHammerFrequencies"][0]*100,1) . '%</p>
 						<div class="scoring-indicator blank">
 							0
 						</div>
-						<div class="table-entry-rank-container">
-							<p>' . $hammerFrequencies[8]['TeamRank'] . '<sup>th</sup></p>
-						</div>
 					</div>
 					<div class="table-entry">
-						<p>' . round($hammerFrequencies[7]['rate']*100,1) . '%</p>
+						<p>' . round($teamStats["nonHammerFrequencies"][-1]*100,1) . '%</p>
 						<div class="scoring-indicator minus-one">
 							-1
 						</div>
-						<div class="table-entry-rank-container">
-							<p>' . $hammerFrequencies[7]['TeamRank'] . '<sup>th</sup></p>
-						</div>
 					</div>
 					<div class="table-entry">
-						<p>' . round(($hammerFrequencies[6]['rate'] +
-								$hammerFrequencies[5]['rate'] +
-								$hammerFrequencies[4]['rate'] +
-								$hammerFrequencies[3]['rate'] + 
-								$hammerFrequencies[2]['rate'] +
-								$hammerFrequencies[1]['rate'] +
-								$hammerFrequencies[0]['rate'])*100,1) . '%</p>
+						<p>' . round($teamStats["hammerFrequencies"][-2]*100 +
+								$teamStats["hammerFrequencies"][-3]*100 + 
+								$teamStats["hammerFrequencies"][-4]*100 + 
+								$teamStats["hammerFrequencies"][-5]*100 + 
+								$teamStats["hammerFrequencies"][-6]*100 + 
+								$teamStats["hammerFrequencies"][-7]*100 + 
+								$teamStats["hammerFrequencies"][-8]*100,1) . '%</p>
 						<div class="scoring-indicator minus-two">
 							-2+
 						</div>
-						<div class="table-entry-rank-container">
-							<p>' . $hammerFrequencies[6]['TeamRank'] . '<sup>th</sup></p>
-						</div>
 					</div>
 					<div class="table-entry">
-						<p>' . round($netScoringWithAvg, 1) . '</p>
+						<p>' . round($teamStats["netScoringWith"], 2) . '</p>
 						<div class="scoring-indicator net">
 							<p>Net</p>
-						</div>
-						<div class="table-entry-rank-container">
-							<p>' . $netScoringWith[0]["Rank"] . '<sup>th</sup></p>
 						</div>
 					</div>
 				</div>
@@ -285,83 +280,59 @@ echo '
 					<div class="scoring-frequency-title-img">
 						<img src="tiles/hammer-icon-not.png">
 					</div>
-					<div class="scoring-frequency-title-rank">
-						Rank <p>(All Time)</p>
-					</div>
 				</div>
 				<div class="scoring-frequency-table">
 										<div class="table-entry">
-						<p>' . round(($nonHammerFrequencies[16]['rate'] +
-								$nonHammerFrequencies[15]['rate'] +
-								$nonHammerFrequencies[14]['rate'] +
-								$nonHammerFrequencies[13]['rate'] + 
-								$nonHammerFrequencies[12]['rate'] +
-								$nonHammerFrequencies[11]['rate'] +
-								$nonHammerFrequencies[10]['rate'])*100,1) . '%</p>
+						<p>' . round($teamStats["nonHammerFrequencies"][8]*100 +
+								$teamStats["nonHammerFrequencies"][7]*100  +
+								$teamStats["nonHammerFrequencies"][6]*100 +
+								$teamStats["nonHammerFrequencies"][5]*100 +
+								$teamStats["nonHammerFrequencies"][4]*100 +
+								$teamStats["nonHammerFrequencies"][3]*100 +
+								$teamStats["nonHammerFrequencies"][2]*100,1) . '%</p>
 						<div class="scoring-indicator three">
 							2+
 						</div>
-						<div class="table-entry-rank-container">
-							<p>' . $nonHammerFrequencies[10]['TeamRank'] . '<sup>th</sup></p>
-						</div>
 					</div>
 					<div class="table-entry">
-						<p>' . round($nonHammerFrequencies[9]['rate']*100,1) . '%</p>
+						<p>' . round($teamStats["nonHammerFrequencies"][1]*100,1) . '%</p>
 						<div class="scoring-indicator two">
 							1
 						</div>
-						<div class="table-entry-rank-container">
-							<p>' . $nonHammerFrequencies[9]['TeamRank'] . '<sup>th</sup></p>
-						</div>
 					</div>
 					<div class="table-entry">
-						<p>' . round($nonHammerFrequencies[8]['rate']*100,1) . '%</p>
+						<p>' . round($teamStats["nonHammerFrequencies"][0]*100,1) . '%</p>
 						<div class="scoring-indicator one">
 							0
 						</div>
-						<div class="table-entry-rank-container">
-							<p>' . $nonHammerFrequencies[8]['TeamRank'] . '<sup>th</sup></p>
-						</div>
 					</div>
 					<div class="table-entry">
-						<p>' . round($nonHammerFrequencies[7]['rate']*100,1) . '%</p>
+						<p>' . round($teamStats["nonHammerFrequencies"][-1]*100,1) . '%</p>
 						<div class="scoring-indicator blank">
 							-1
 						</div>
-						<div class="table-entry-rank-container">
-							<p>' . $nonHammerFrequencies[7]['TeamRank'] . '<sup>th</sup></p>
-						</div>
 					</div>
 					<div class="table-entry">
-						<p>' . round($nonHammerFrequencies[6]['rate']*100,1) . '%</p>
+						<p>' . round($teamStats["nonHammerFrequencies"][-2]*100,1) . '%</p>
 						<div class="scoring-indicator minus-one">
 							-2
 						</div>
-						<div class="table-entry-rank-container">
-							<p>' . $nonHammerFrequencies[6]['TeamRank'] . '<sup>th</sup></p>
-						</div>
 					</div>
 					<div class="table-entry">
-						<p>' . round(($nonHammerFrequencies[5]['rate'] +
-								$nonHammerFrequencies[4]['rate'] +
-								$nonHammerFrequencies[3]['rate'] + 
-								$nonHammerFrequencies[2]['rate'] +
-								$nonHammerFrequencies[1]['rate'] +
-								$nonHammerFrequencies[0]['rate'])*100,1) . '%</p>
+						<p>' . round($teamStats["nonHammerFrequencies"][-3]*100 +
+								$teamStats["nonHammerFrequencies"][-4]*100 +
+								$teamStats["nonHammerFrequencies"][-5]*100 +
+								$teamStats["nonHammerFrequencies"][-6]*100 +
+								$teamStats["nonHammerFrequencies"][-7]*100 +
+								$teamStats["nonHammerFrequencies"][-8]*100,1) . '%</p>
 						<div class="scoring-indicator minus-three">
 							-3+
 						</div>
-						<div class="table-entry-rank-container">
-							<p>' . $hammerFrequencies[5]['TeamRank'] . '<sup>th</sup></p>
-						</div>
 					</div>
 					<div class="table-entry">
-						<p>' . round($netScoringWithoutAvg, 2) . '</p>
+						<p>' . round($teamStats["netScoringWithout"], 2) . '</p>
 						<div class="scoring-indicator net">
 							<p>Net<p>
-						</div>
-						<div class="table-entry-rank-container">
-							<p>' . $netScoringWithout[0]["Rank"] . '<sup>th</sup></p>
 						</div>
 					</div>
 				</div>
@@ -378,7 +349,7 @@ echo '
 					</div>
 					<div class="line-chart-container">
 						
-						<canvas id="buyers" width="500" height="250"></canvas>
+						<canvas id="ebe" width="500" height="250"></canvas>
 					</div>
 				</div>
 				<div class="winning-percentage-chart">
@@ -1018,23 +989,47 @@ echo '
         <script>
 		
 		// line chart data
-            var buyerData = {
-                labels : ["1","2","3","4","5","6","7","8"],
+            var ebeData = {
+                labels : ["1","2","3","4","5","6","7","8","9"],
                 datasets : [
                 {
 					label: "Hammer",
-                    fillColor : "rgba(172,194,132,0.4)",
+                    fillColor : "rgba(46, 204, 113,0.4)",
                     strokeColor : "#ACC26D",
-                    pointColor : "#fff",
+                    pointColor : "#2ecc71",
                     pointStrokeColor : "#9DB86D",
-                    data : [2,2,3,4,3,2,1,3]
+                    data : [' . $teamStats["EBEAvgScoringWith"][0] . ','
+							. $teamStats["EBEAvgScoringWith"][1] . ','
+							. $teamStats["EBEAvgScoringWith"][2] . ','
+							. $teamStats["EBEAvgScoringWith"][3] . ','
+							. $teamStats["EBEAvgScoringWith"][4] . ','
+							. $teamStats["EBEAvgScoringWith"][5] . ','
+							. $teamStats["EBEAvgScoringWith"][6] . ','
+							. $teamStats["EBEAvgScoringWith"][7] . ','
+							. $teamStats["EBEAvgScoringWith"][8] . ']
+                },
+				{
+					label: "Without Hammer",
+                    fillColor : "rgba(231, 76, 60,0.4)",
+                    strokeColor : "#ACC26D",
+                    pointColor : "#e74c3c",
+                    pointStrokeColor : "#9DB86D",
+                    data : [' . $teamStats["EBEAvgScoringWithout"][0] . ','
+							  . $teamStats["EBEAvgScoringWithout"][1] . ','
+							  . $teamStats["EBEAvgScoringWithout"][2] . ','
+							  . $teamStats["EBEAvgScoringWithout"][3] . ','
+							  . $teamStats["EBEAvgScoringWithout"][4] . ','
+							  . $teamStats["EBEAvgScoringWithout"][5] . ','
+							  . $teamStats["EBEAvgScoringWithout"][6] . ','
+							  . $teamStats["EBEAvgScoringWithout"][7] . ','
+							  . $teamStats["EBEAvgScoringWithout"][8] . ']
                 }
             ]
             }
             // get line chart canvas
-            var buyers = document.getElementById("buyers").getContext("2d");
+            var ebe = document.getElementById("ebe").getContext("2d");
             // draw line chart
-            new Chart(buyers).Line(buyerData, {
+            new Chart(ebe).Line(ebeData, {
 			scaleShowGridLines: false,
 			scaleFontColor: "#fff"
 			});
@@ -1042,7 +1037,7 @@ echo '
 			// get line chart canvas
             var buyers2 = document.getElementById("buyers-2").getContext("2d");
             // draw line chart
-            new Chart(buyers2).Line(buyerData, {
+            new Chart(buyers2).Line(ebeData, {
 			scaleShowGridLines: false,
 			scaleFontColor: "#fff"
 			});
@@ -1051,20 +1046,20 @@ echo '
             // pie chart data
             var pieData = [
                 {
-                    value: 20,
-                    color:"#EE1111"
+                    value: ' . $teamStats["winsWith"] . ',
+                    color:"#2ECC71"
                 },
                 {
-                    value : 40,
+                    value :  ' . $teamStats["winsWithout"] . ',
                     color : "#16A085"
                 },
                 {
-                    value : 10,
-                    color : "#2ECC71"
+                    value : ' . $teamStats["lossesWith"] . ',
+                    color : "#DA532C"
                 },
                 {
-                    value : 30,
-                    color : "#DA532C"
+                    value : ' . $teamStats["lossesWithout"] . ',
+                    color : "#ee1111"
                 }
             ];
             // pie chart options
@@ -1073,9 +1068,9 @@ echo '
                  animateScale : true
             }
             // get pie chart canvas
-            var countries= document.getElementById("countries").getContext("2d");
+            var teamWins= document.getElementById("teamWins").getContext("2d");
             // draw pie chart
-            new Chart(countries).Pie(pieData, pieOptions);
+            new Chart(teamWins).Pie(pieData, pieOptions);
           
         </script>
 

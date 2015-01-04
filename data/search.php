@@ -7,7 +7,8 @@ $GENDER = 3;
 
 
 $input = filter_input(INPUT_POST, 'input');
-$pieces = explode(" ", $input);
+$pieces = array_filter(explode(" ", $input));
+
 
 try {
 	$con = new PDO('mysql:host=localhost;dbname=rockstat', "root", "jikipol");
@@ -20,13 +21,14 @@ try {
 	$player_results = array();
 	$stmt = $con->prepare("SELECT * FROM Player Where FirstName LIKE :name OR LastName LIKE :name");
     $stmt->bindParam(':name', $name);
-	for ($i = 0; $i < count($pieces); $i++) {	
-		$name = $pieces[$i];
+	foreach ($pieces as $p) {	
+		$name = $p;
 		$stmt->execute();
 		$result = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
+		
 		$player_results = array_merge($player_results, $result);
 	}
+	
 	//Check for good matches.  Remove bad matches
 	$duplicates = array();
 	for($i = 0; $i < count($player_results); $i++){

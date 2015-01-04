@@ -672,19 +672,10 @@ div.big-tile a {
 .scoring-frequency-title-img img {
 	position:absolute;
 	height:100%;
-	left:45%;
+	left:65%;
 	top:0%;
 }
 
-.scoring-frequency-title-rank {
-	position: absolute;
-	left:75%;
-	top:20%;
-	width:25%;
-}
-.scoring-frequency-title-rank p {
-	font-size: .6em;
-}
 .scoring-frequency-table .table-entry {
 	position:relative;
 	width:100%;
@@ -697,7 +688,7 @@ div.big-tile a {
 .table-entry p {
 	position:relative;
 	top:17%;
-	left: 30%;
+	left: 40%;
 }
 
 
@@ -805,14 +796,14 @@ div.big-tile a {
 	position:absolute;
 	top: 1.5%;
 	left:70%;
-	background: #2ecc71;
+	background: #e74c3c;
 }
 
 .not-hammer-circle {
 	position:absolute;
 	top:1.5%;
 	left:44%;
-	background: #e74c3c;
+	background: #2ecc71;
 }
 
 .legend-text-with {

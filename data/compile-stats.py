@@ -235,6 +235,91 @@ def compileNetScoring():
 					")
 	db.commit()
 	
+#Compiles Stats for End By End (EBE) Scoring Averages
+def compileEBE():
+	#Get Teams ID's
+	cur.execute("SELECT ID FROM TEAM")
+	teamIds = cur.fetchall()
+	#For Each Team:
+	for id in range(0, len(teamIds)):
+		teamID = teamIds[id][0]			#Get Current Team's ID
+		#Arrays to hold rows for each end
+		hammerEnds = []
+		nonHammerEnds = []
+		for x in range(0, 12):
+			hammerEnds.append([])
+			nonHammerEnds.append([])
+		#Get all games that the current team has played
+		cur.execute("SELECT * FROM Game WHERE (Game.HammerTeamID = " + str(teamID) + " OR Game.OtherTeamID = " + str(teamID) + ")")
+		allGames = cur.fetchall()
+		#For each game the current team has played:
+		for game in range(0, len(allGames)):
+			#Get All ends with the current game ID
+			cur.execute("SELECT * FROM EndScore WHERE Game = " + str(allGames[game][0]))
+			gameEnds = cur.fetchall()
+			#Get the Hammer Team ID and the Other Team ID
+			hammerTeamID = allGames[game][2]
+			otherTeamID = allGames[game][3]
+			teamWithHammerThisEnd = HAMMER_TEAM
+			#Returns 1 if Our Team is the team with hammer in the first end.  
+			#Else returns 2 if our team is the team without hammer in the first end.
+			OUR_TEAM = isCurrentTeamHammerTeam(teamID, hammerTeamID, otherTeamID)
+			OPPONENT_TEAM = 3 - OUR_TEAM
+			for end in range(0, len(gameEnds)):					#Iterate through each end
+				if (teamWithHammerThisEnd == HAMMER_TEAM):
+					hammerTeamScore = int(gameEnds[end][2])		
+					nonHammerTeamScore = int(gameEnds[end][3])
+				else:
+					hammerTeamScore = int(gameEnds[end][3])		
+					nonHammerTeamScore = int(gameEnds[end][2])
+					
+				if (teamWithHammerThisEnd == OUR_TEAM):			#Check to see if the team with hammer this end is our current team				
+					if (hammerTeamScore == 0 and nonHammerTeamScore == 0):	#Blank End
+						hammerEnds[end].append(0)							#Append a blank
+					elif (hammerTeamScore != 0):						#Else check if our team scored
+						teamWithHammerThisEnd = OPPONENT_TEAM			#Flip which team has hammer
+						hammerEnds[end].append(hammerTeamScore)
+					else:
+						hammerEnds[end].append(-nonHammerTeamScore)				#Else the other team scored.  Append the negative amount to ours
+				else:								#Else the team with hammer this end is the opposition
+					if (hammerTeamScore == 0 and nonHammerTeamScore == 0):	#Blank End
+						nonHammerEnds[end].append(0)
+					elif (hammerTeamScore != 0):						#Team with the hammer scored
+						nonHammerEnds[end].append(-hammerTeamScore)
+						teamWithHammerThisEnd = OUR_TEAM	
+					else:												#Else we stole
+						nonHammerEnds[end].append(nonHammerTeamScore)
+		#Get Averages for each end
+		averageForEnd = []
+		for h in range(0, len(hammerEnds)):		#Ends with Hammer
+			try:
+				averageForEnd.append(sum(hammerEnds[h])*1.0/len(hammerEnds[h]))
+			except:
+				averageForEnd.append(0)
+		for endNumber in range(0, len(hammerEnds)):
+			cur.execute("INSERT INTO EndByEndAvgScoring VALUES ( " +\
+						str(teamID) + ", " + \
+						str(endNumber) + ", " +\
+						"True, " +\
+						str(averageForEnd[endNumber]) +\
+						")")
+		averageForEnd = []
+		for h in range(0, len(nonHammerEnds)):		#Ends without Hammer
+			try: 
+				averageForEnd.append(sum(nonHammerEnds[h])*1.0/len(nonHammerEnds[h]))
+			except:
+				averageForEnd.append(0)
+		for endNumber in range(0, len(nonHammerEnds)):
+			cur.execute("INSERT INTO EndByEndAvgScoring VALUES ( " +\
+						str(teamID) + ", " + \
+						str(endNumber) + ", " +\
+						"False, " +\
+						str(averageForEnd[endNumber]) +\
+						")")
+						
+						
+	db.commit()
+
 
 #Connect To Database
 db = MySQLdb.connect(host="localhost", # your host, usually localhost
@@ -244,8 +329,9 @@ db = MySQLdb.connect(host="localhost", # your host, usually localhost
 					  
 cur = db.cursor()
 
-print("0%")
-compileNetScoring()
-print("\b\b50%")
-compileScoringFrequencies()
-print("\b\b\b100%")
+
+#compileNetScoring()
+#compileScoringFrequencies()
+compileEBE()
+
+
