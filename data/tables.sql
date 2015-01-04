@@ -71,6 +71,5 @@ TeamID int not NULL,
 Hammer boolean,
 Score int,
 rate float,
-TeamRank int,
 FOREIGN KEY (TeamID) REFERENCES Team(ID)
 );

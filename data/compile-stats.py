@@ -29,7 +29,6 @@ def compileScoringFrequencies():
 	Hammer boolean,\
 	Score int,\
 	rate float,\
-	TeamRank int,\
 	FOREIGN KEY (TeamID) REFERENCES Team(ID)\
 	)")
 	cur.execute("SELECT ID FROM TEAM")
@@ -101,24 +100,6 @@ def compileScoringFrequencies():
 			cur.execute("INSERT INTO ScoringFrequency VALUES ( " +\
 			str(teamID) + ", false, " + str(i) + ", " + str(frequencies[i]) + ", -1)") 
 	cur.execute("ALTER TABLE scoringfrequency ORDER BY Score, Hammer, Rate desc")
-	db.commit()
-	#Get Ranks for each team
-	for i in range(-8,9):
-		print("Done One");
-		#cur.execute("SELECT Team.id, COUNT(*) c FROM Team, Game WHERE Team.ID = Game.HammerTeamID OR Team.ID = Game.OtherTeamID Group by team.id having c > 30")
-		cur.execute("SELECT ScoringFrequency.TeamID, ScoringFrequency.Hammer, ScoringFrequency.Score, ScoringFrequency.rate, ScoringFrequency.TeamRank FROM ScoringFrequency, Team WHERE ScoringFrequency.TeamID=Team.ID AND ScoringFrequency.Score = " + str(i) + " AND ScoringFrequency.Hammer = True AND Team.Games >= 30 ORDER BY ScoringFrequency.rate DESC");
-		print("Done")
-		scoringFrequenciesHammer = cur.fetchall()
-		cur.execute("SELECT ScoringFrequency.TeamID, ScoringFrequency.Hammer, ScoringFrequency.Score, ScoringFrequency.rate, ScoringFrequency.TeamRank FROM ScoringFrequency, Team WHERE ScoringFrequency.TeamID=Team.ID AND ScoringFrequency.Score = " + str(i) + " AND ScoringFrequency.Hammer = False AND Team.Games >= 30 ORDER BY ScoringFrequency.rate DESC");
-		print("Done")
-		scoringFrequenciesNonHammer = cur.fetchall()
-		for s in range(0, len(scoringFrequenciesHammer)):
-			IDHammer = scoringFrequenciesHammer[s][0]
-			IDNonHammer = scoringFrequenciesNonHammer[s][0]
-			cur.execute("UPDATE ScoringFrequency SET TeamRank = " + str(s+1) + " WHERE TeamID = " + str(IDHammer) + " AND Hammer = True AND Score = " + str(i) + " ")
-			cur.execute("UPDATE ScoringFrequency SET TeamRank = " + str(s+1) + " WHERE TeamID = " + str(IDNonHammer) + " AND Hammer = False AND Score = " + str(i) + " ")
-			
-			
 	db.commit()
 	
 

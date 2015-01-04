@@ -30,92 +30,131 @@ try {
 	Check For Tile Type
 	******************/
 	if ($tile_type == 'player') {
+		$tile_type_string = 'Player';
+		
+		//Get Teams that the specified player has played on
 		$stmt = $con->prepare("SELECT TeamID FROM PlayerTeam Where PlayerID = :tile_id");
 		$stmt->bindParam(':tile_id', $tile_id);
 		$stmt->execute();
-		/**********************************
-		Get Teams that the Player has played on (or for team, get the team)
-		**********************************/
 		$team_ids = $stmt->fetchAll(PDO::FETCH_ASSOC);
-		//$player_stats = getPlayerStats($team_ids);
+		
+		//For Each Team that the player has played on, get its team stats
+		$allTeamStats = array();
 		for($i = 0; $i < count($team_ids); $i++) {
-			$team_ids[$i]["ID"] = $team_ids[$i]["TeamID"];	//Make it compatible with code below.  Column has to be named 'ID' not 'TeamID'
+			$teamStats = getTeamStats($team_ids[$i]["TeamID"];
+			array_push($allTeamStats, $teamStats);
 		}
-		$tile_type_string = 'Player';
+
 	}
 	else if ($tile_type == 'team') {
-		$stmt = $con->prepare("SELECT ID FROM Team Where ID = :tile_id");
-		$stmt->bindParam(':tile_id', $tile_id);
-		$stmt->execute();
-		$team_ids = $stmt->fetchAll(PDO::FETCH_ASSOC);
-		//getTeamStats($team_ids);
 		$tile_type_string = 'Team';
+		
+		//Get Teams Stats
+		getTeamStats($tile_id);
 	}
 
 
-	//Get all games
-	$getGames = $con->prepare("SELECT * FROM Game Where HammerTeamID = :ID OR OtherTeamID = :ID");
-	$getGames->bindParam(':ID', $id);
-	
-	//Get Scoring Frequencies
-	$getHammerFrequencies = $con->prepare("SELECT * FROM ScoringFrequency Where TeamID = :ID AND Hammer=true");
-	$getHammerFrequencies->bindParam(':ID', $id);
-	
-	$getNonHammerFrequencies = $con->prepare("SELECT * FROM ScoringFrequency Where TeamID = :ID AND Hammer=false");
-	$getNonHammerFrequencies->bindParam(':ID', $id);
-	
-	$setRowNum = $con->prepare("SET @row_num = 0;");
-	$getNetScoringHammer = $con->prepare("SELECT Rank, NetScoringWith FROM (SELECT @row_num := @row_num + 1 as Rank, ID, NetScoringWith FROM Team WHERE Games >= 30 ORDER BY NetScoringWith DESC) As Result WHERE ID = :ID");
-	$getNetScoringHammer->bindParam(':ID', $id);
-	$netScoringWithAvg = 0;
-	
-
-	$getNetScoringNonHammer = $con->prepare("SELECT Rank, NetScoringWithout FROM (SELECT @row_num := @row_num + 1 as Rank, ID, NetScoringWithout FROM Team WHERE Games >= 30 ORDER BY NetScoringWithout DESC) As Result WHERE ID = :ID");
-	$getNetScoringNonHammer->bindParam(':ID', $id);
-	$netScoringWithoutAvg = 0;
-	
-	for($i = 0; $i < count($team_ids); $i++) {
-		$id = $team_ids[$i]['ID'];
-		//Get Games
-		$getGames->execute();
-		$games = $getGames->fetchAll(PDO::FETCH_ASSOC);
-		$gameResults = array_merge($gameResults, $games);
-		
-		$getHammerFrequencies->execute();
-		$hammerFrequencies = $getHammerFrequencies->fetchAll(PDO::FETCH_ASSOC);
-		
-		$getNonHammerFrequencies->execute();
-		$nonHammerFrequencies = $getNonHammerFrequencies->fetchAll(PDO::FETCH_ASSOC);
-		
-		$setRowNum->execute();
-		
-		$getNetScoringHammer->execute();
-		$netScoringWith = $getNetScoringHammer->fetchAll(PDO::FETCH_ASSOC);
-		if (count($netScoringWith) > 0) {	//If Results are non-empty
-			$netScoringWithAvg = $netScoringWithAvg + 1/($i+1)*($netScoringWith[0]["NetScoringWith"] - $netScoringWithAvg);
-		}
-		else {
-			$netScoringWith[0]["Rank"] = "N/A";
-		}
-		
-		$setRowNum->execute();
-
-		$getNetScoringNonHammer->execute();
-		$netScoringWithout = $getNetScoringNonHammer->fetchAll(PDO::FETCH_ASSOC);
-		if (count($netScoringWithout) > 0) {
-			$netScoringWithoutAvg = $netScoringWithoutAvg + 1/($i+1)*($netScoringWithout[0]["NetScoringWithout"] - $netScoringWithoutAvg);
-		}
-		else {
-			$netScoringWithout[0]["Rank"] = "N/A";
-		}
-	}
-	$numGames = count($gameResults);
 
 }
 catch(PDOException $e){
 	echo 'ERROR:' . $e->getMessage();
 }
 
+/**
+Given a Team ID and returns an associative array with relevant stats
+Returns
+Array{numGames, wins, losses, ... , netScoringWith, netScoringWithout, LeadFirstName, LeadLastName, ... , EBEAvgScoringWith[], EBEAvgScoringWithout[], ScoringFrequencyWith[], ScoringFrequencyWithout[]} 
+*/
+function getTeamStats($team_id) {
+	
+	$teamStats = array();
+
+	$getMainStats = $con->prepare("SELECT * FROM Team WHERE ID = :ID");
+	$getMainStats->bindParam(':ID', $team_id);
+	$getMainStats->execute();
+	$mainStats = $getMainStats->fetchAll(PDO::FETCH_ASSOC);
+	
+	$teamStats = addMainStats($teamStats, $mainStats);
+	
+	$getPlayerNames = $con->prepare("SELECT * FROM PlayerTeam, PlayerWHERE Player.ID = PlayerTeam.PlayerID AND TeamID = :ID ORDER BY Position ASC");
+	$getPlayerNames->bindParam(':ID', $team_id);
+	$getPlayerNames->execute();
+	$playerNames = $getPlayerNames->fetchAll(PDO::FETCH_ASSOC);
+	
+	$teamStats = addPlayerNames($teamStats, $playerNames);
+	
+	$getEBEAvgScoring = $con->prepare("SELECT * FROM EndByEndAvgScoring WHERE TeamID = :ID");
+	$getEBEAvgScoring->bindParam(':ID', $team_id);
+	$getEBEAvgScoring->execute();
+	$EBEAvgScoring = $getEBEAvgScoring->fetchAll(PDO::FETCH_ASSOC);
+	
+	$teamStats = addEBE($teamStats, $EBEAvgScoring);
+	
+	$getfrequencies = $con->prepare("SELECT * FROM ScoringFrequency Where TeamID = :ID");
+	$getfrequencies->bindParam(':ID', $id);
+	$getfrequencies->execute();
+	$frequencies = $getfrequencies->fetchAll(PDO::FETCH_ASSOC);
+	
+	$teamStats = addFrequencies($teamStats, $Frequencies);
+	
+	return $teamStats;
+}
+/**
+Given An Associative Array representing the Team Table
+*/
+function addMainStats($teamStats, $mainStats){
+	$teamStats["numGames"] = $mainStats[0]["Games"];
+	$teamStats["wins"] = $mainStats[0]["Wins"];
+	$teamStats["losses"] = $mainStats[0]["Losses"];
+	$teamStats["winPercentage"] = $mainStats[0]["WinPercentage"];
+	$teamStats["pfg"] = $mainStats[0]["PFG"];
+	$teamStats["pag"] = $mainStats[0]["PAG"];
+	$teamStats["eventsPlayed"] = $mainStats[0]["EventsPlayed"];
+	$teamStats["eventsWon"] = $mainStats[0]["eventsWon"];
+	$teamStats["winsWith"] = $mainStats[0]["WinsWith"];
+	$teamStats["winsWithout"] = $mainStats[0]["WinsWithout"];
+	$teamStats["lossesWith"] = $mainStats[0]["LossesWithout"];
+	$teamStats["lossesWith"] = $mainStats[0]["LossesWith"];
+	$teamStats["lossesWithout"] = $mainStats[0]["LossesWithout"];
+	$teamStats["netScoringWithout"] = $mainStats[0]["NetScoringWithout"];
+	$teamStats["netScoringWith"] = $mainStats[0]["NetScoringWith"];
+	
+	return $teamStats;
+	
+}
+
+function addEBE($teamStats, $EBE){
+	return $teamStats;
+}
+
+function addFrequencies($teamStats, $frequencies) {
+	$hammerFrequencies = array();
+	$nonHammerFrequencies = array();
+	
+	for($i = 0; $i < count($frequencies); $i++){
+		if ($frequencies[$i]["Hammer"] = True) {
+			array_push($hammerFrequencies, $frequencies[$i]["Rate"]);
+		}
+		else {
+			array_push($nonHammerFrequencies, $frequencies[$i]["Rate"]);
+		}
+	}
+	$teamStats["hammerFrequencies"] = $hammerFrequencies;
+	$teamStats["nonHammerFrequencies"] = $nonHammerFrequencies;
+	
+	return $teamStats;
+}
+
+function addPlayerNames($teamStats, $playerNames) {
+	
+	$teamNamesArray = array();
+	//Iterate through each player, adding their name array to the teamNamesArray
+	for($i = 0; $i<4; $i++) {
+		$nameArray = array();
+	}
+	
+	$teamStats["playerNames"] = $nameArray;
+}
 echo '
         <!-- pie chart  canvas element -->
 		<div class="row">
