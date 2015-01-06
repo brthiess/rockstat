@@ -41,7 +41,7 @@ try {
 			$teamStats = getTeamStats($team_ids[$i]["TeamID"]);
 			array_push($allTeamStats, $teamStats);
 		}
-
+		$teamStats = calibrateStats($allTeamStats);
 	}
 	else if ($tile_type == 'team') {
 		$tile_type_string = 'Team';
@@ -60,7 +60,7 @@ catch(PDOException $e){
 /**
 Given a Team ID and returns an associative array with relevant stats
 Returns
-Array{numGames, wins, losses, ... , netScoringWith, netScoringWithout, playerNames[Position][First or Last Name], ... , EBEAvgScoringWith[], EBEAvgScoringWithout[], ScoringFrequencyWith[], ScoringFrequencyWithout[]} 
+Array{numGames, wins, losses, ... , netScoringWith, netScoringWithout, playerNames[Position][First or Last Name], ... , EBEAvgScoringWith[], EBEAvgScoringWithout[], ScoringFrequencyWith[], ScoringFrequencyWithout[], WPOT[]} 
 */
 function getTeamStats($team_id, $con) {
 	
@@ -87,12 +87,19 @@ function getTeamStats($team_id, $con) {
 	
 	$teamStats = addEBE($teamStats, $EBEAvgScoring);
 	
-	$getfrequencies = $con->prepare("SELECT * FROM ScoringFrequency Where TeamID = :ID ORDER BY Score, Hammer ASC");
+	$getfrequencies = $con->prepare("SELECT * FROM ScoringFrequency WHERE TeamID = :ID ORDER BY Score, Hammer ASC");
 	$getfrequencies->bindParam(':ID', $team_id);
 	$getfrequencies->execute();
 	$frequencies = $getfrequencies->fetchAll(PDO::FETCH_ASSOC);
 	
 	$teamStats = addFrequencies($teamStats, $frequencies);
+	
+	$getWPOT = $con->prepare("SELECT * FROM WPOT WHERE TeamID = :ID ORDER BY MonthNumber");
+	$getWPOT->bindParam(":ID", $team_id);
+	$getWPOT->execute();
+	$WPOT = $getWPOT->fetchAll(PDO::FETCH_ASSOC);
+	
+	$teamStats = addWPOT($teamStats, $WPOT);
 
 	return $teamStats;
 }
@@ -171,6 +178,20 @@ function addPlayerNames($teamStats, $playerNames) {
 		array_push($teamNamesArray, $playerNames);
 	}
 	$teamStats["names"] = $teamNamesArray;
+	return $teamStats;
+}
+
+/**
+Returns Assoc Array for each month and associated winning percentage
+*/
+function addWPOT($teamStats, $WPOT){
+	$WMonth = array();
+	
+	for($i = 0; $i < count($WPOT); $i++) {
+		$WMonth[$WPOT[$i]["MonthNumber"]] = round($WPOT[$i]["WinningPercentage"]*100, 1);
+	}
+	
+	$teamStats["WPOT"] = $WMonth;
 	return $teamStats;
 }
 
@@ -354,10 +375,10 @@ echo '
 				</div>
 				<div class="winning-percentage-chart">
 					<div class="line-chart-title">
-						Winning Percentage Over Time
+						Winning Percentage Month By Month
 					</div>
 					<div class="winning-percentage-chart-container">
-						<canvas id="buyers-2" width="500" height="150"></canvas>
+						<canvas id="WPOT" width="500" height="150"></canvas>
 					</div>
 				</div>
 			</div>
@@ -988,7 +1009,7 @@ echo '
 		
         <script>
 		
-		// line chart data
+		// EBE chart data
             var ebeData = {
                 labels : ["1","2","3","4","5","6","7","8","9"],
                 datasets : [
@@ -1034,10 +1055,32 @@ echo '
 			scaleFontColor: "#fff"
 			});
 			
+			
+			var WPOTData = {
+                labels : ["September","October","November","December","January","February","March","April"],
+                datasets : [
+                {
+					label: "WPOT",
+                    fillColor : "rgba(46, 204, 113,0.4)",
+                    strokeColor : "#ACC26D",
+                    pointColor : "#2ecc71",
+                    pointStrokeColor : "#9DB86D",
+                    data : [' . $teamStats["WPOT"][9] . ','
+							. $teamStats["WPOT"][10] . ','
+							. $teamStats["WPOT"][11] . ','
+							. $teamStats["WPOT"][12] . ','
+							. $teamStats["WPOT"][1] . ','
+							. $teamStats["WPOT"][2] . ','
+							. $teamStats["WPOT"][3] . ','
+							. $teamStats["WPOT"][4] . ']
+                }
+            ]
+            }
+			
 			// get line chart canvas
-            var buyers2 = document.getElementById("buyers-2").getContext("2d");
+            var WPOT = document.getElementById("WPOT").getContext("2d");
             // draw line chart
-            new Chart(buyers2).Line(ebeData, {
+            new Chart(WPOT).Line(WPOTData, {
 			scaleShowGridLines: false,
 			scaleFontColor: "#fff"
 			});

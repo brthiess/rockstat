@@ -73,3 +73,18 @@ Score int,
 rate float,
 FOREIGN KEY (TeamID) REFERENCES Team(ID)
 );
+
+CREATE TABLE WPOT (
+TeamID int not NULL,
+WinningPercentage float,
+MonthNumber int,
+FOREIGN KEY (TeamID) REFERENCES Team(ID)
+);
+
+CREATE TABLE WBS (
+TeamID int not NULL,
+EndNumber
+ScoreDifferential
+WinningPercentage
+FOREIGN KEY (TeamID) REFERENCES Team(ID)
+)

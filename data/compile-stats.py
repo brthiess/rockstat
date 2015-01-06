@@ -319,9 +319,161 @@ def compileEBE():
 						
 						
 	db.commit()
+	
+def compileWPOT():
+	#Get Team IDs
+	cur.execute("SELECT ID FROM TEAM")
+	teamIds = cur.fetchall()
+	#For Each Team ID 
+	for t in range(0, len(teamIds)):
+		teamID = teamIds[t][0]
+		#Get All of the games played by this team by each month
+		for m in range(1,13):
+			cur.execute("SELECT * FROM Game WHERE (HammerTeamID = " + str(teamID) +\
+					" OR OtherTeamID = " + str(teamID) +\
+					") AND MONTH(GameDate) = " + str(m) +\
+					"")
+			#Get All games for current month
+			games = cur.fetchall();
+			totalGames = 0
+			winningGames = 0
+			losingGames = 0
+			#Get Winning percentage for this month
+			for g in games:
+				gameStats = getGameStats(g)
+				if (gameStats == None):
+					continue
+				totalGames += 1
+				if (teamID == gameStats["winnerID"]):
+					winningGames += 1
+				elif (teamID == gameStats["loserID"]):
+					losingGames += 1
+			#Make sure everything adds up or else something is wrong
+			assert(totalGames == (losingGames + winningGames))
 
-
-#Connect To Database
+			try:
+				winningPercentage = winningGames*1.0/totalGames
+			except:
+				#If team has not played any games this month, then set winning % to 0
+				winningPercentage = 0
+			#Insert winning percentage into sql db
+			cur.execute("INSERT INTO WPOT VALUES(" + str(teamID) +\
+						", " + str(winningPercentage) +\
+						", " + str(m) +\
+						")")
+	db.commit()
+			
+def compileWinsBySituation():
+	#Get All Team ID's
+	cur.execute("SELECT ID FROM Team");
+	teamIds = cur.fetchall()
+	#Iterate Through Each Team:
+	for t in range(0, len(teamIds)):
+		teamID = teamIds[t][0]
+		print("Team ID: " + str(teamID))
+		#Initialize triple-dimensional array to this:
+		#hammerEnds[EndNumber][Score Differential (From Down 4 to Up 4)][Win/Loss Data (ex: 0,1,1,1,1,0...)]
+		hammerEnds = {}
+		nonHammerEnds = {}
+		for end in range(0,13):
+			hammerEnds[end] = {}
+			nonHammerEnds[end] = {}
+			for scoreDifferential in range(-4,5):
+				hammerEnds[end][scoreDifferential] = []
+				nonHammerEnds[end][scoreDifferential] = []
+		#Get all games that team has played
+		cur.execute("SELECT * FROM Game WHERE HammerTeamID = " + str(teamID) + " OR OtherTeamID = " + str(teamID))
+		games = cur.fetchall()
+		for g in games:
+			#Get the game stats for the game:
+			gameStats = getGameStats(g)
+			if (gameStats == None):
+				continue
+			#Get ends for the current game
+			cur.execute("SELECT * FROM EndScore WHERE Game = " + str(g[0]) + " ORDER BY EndNumber Asc")
+			gameEnds = cur.fetchall()
+			scoreDifferential = 0
+			hammerTeamID = g[2]
+			otherTeamID = g[3]
+			teamWithHammerThisEnd = HAMMER_TEAM
+			OUR_TEAM = isCurrentTeamHammerTeam(teamID, hammerTeamID, otherTeamID)
+			OPPONENT_TEAM = 3 - OUR_TEAM
+			#print("\n\n\nGame Ends: " + str(gameEnds))
+			for end in range(0, len(gameEnds)):					#Iterate through each end
+				#print("\nEnd Number: " + str(gameEnds[end][0]))
+				
+				if (teamWithHammerThisEnd == HAMMER_TEAM):
+					hammerTeamScore = int(gameEnds[end][2])		
+					nonHammerTeamScore = int(gameEnds[end][3])
+				else:
+					hammerTeamScore = int(gameEnds[end][3])		
+					nonHammerTeamScore = int(gameEnds[end][2])
+				
+				#print("HammerTeamScore: " + str(hammerTeamScore))
+				#print("NonHammerTeamScore: " + str(nonHammerTeamScore))
+				#print("TeamWithHammerThisEnd: " + str(teamWithHammerThisEnd))
+				#print("ScoreDifferential: " + str(scoreDifferential))
+				if (teamWithHammerThisEnd == OUR_TEAM):			#Check to see if the team with hammer this end is our current team				
+					if (gameStats["winnerID"] == teamID):			#If the current team has hammer and won the game then append a win to the hammer array
+						
+						if (scoreDifferential > 4):
+							#print("Appended Win For Up 4 With Hammer")
+							hammerEnds[gameEnds[end][0]][4].append(1)
+						elif (scoreDifferential < -4):
+							#print("Appended Win For Down 4 With Hammer")
+							hammerEnds[gameEnds[end][0]][-4].append(1)
+						else:
+							#print("Appended Win For In Between With Hammer")
+							hammerEnds[gameEnds[end][0]][scoreDifferential].append(1)	
+						if (hammerTeamScore > 0):					#Switch the team who has hammer
+							teamWithHammerThisEnd = OPPONENT_TEAM
+						scoreDifferential = scoreDifferential + hammerTeamScore - nonHammerTeamScore
+					else:
+						if (scoreDifferential > 4):
+							hammerEnds[gameEnds[end][0]][4].append(0)
+						elif (scoreDifferential < -4):
+							hammerEnds[gameEnds[end][0]][-4].append(0)
+						else:
+							#print("Appended Loss For " + str(scoreDifferential) +" With Hammer")
+							hammerEnds[gameEnds[end][0]][scoreDifferential].append(0)
+						if (hammerTeamScore > 0):
+							teamWithHammerThisEnd = OPPONENT_TEAM
+						scoreDifferential = scoreDifferential + hammerTeamScore - nonHammerTeamScore
+				else:								#Else the team with hammer this end is the opposition
+					if (gameStats["winnerID"] == teamID):			#If the current team does not have hammer and won the game then append a win to the nonhammer array
+						if (scoreDifferential > 4):
+							nonHammerEnds[gameEnds[end][0]][4].append(1)
+						elif (scoreDifferential < -4):
+							nonHammerEnds[gameEnds[end][0]][-4].append(1)
+						else:	
+							#print("Appended Win For In Between With Hammer")
+							nonHammerEnds[gameEnds[end][0]][scoreDifferential].append(1)
+						if (hammerTeamScore > 0):
+							teamWithHammerThisEnd = OUR_TEAM
+						scoreDifferential = scoreDifferential + nonHammerTeamScore - hammerTeamScore
+					else:
+						if (scoreDifferential > 4):
+							nonHammerEnds[gameEnds[end][0]][4].append(0)
+						elif (scoreDifferential < -4):
+							nonHammerEnds[gameEnds[end][0]][-4].append(0)
+						else:
+							#print("Appended Loss For " + str(scoreDifferential) +" With Hammer")
+							nonHammerEnds[gameEnds[end][0]][scoreDifferential].append(0)	
+						if (hammerTeamScore > 0):
+							teamWithHammerThisEnd = OUR_TEAM
+						scoreDifferential = scoreDifferential + nonHammerTeamScore - hammerTeamScore
+		for e in range(0,12):
+			for sd in range(-4,5):
+				try:
+					hammerEnds[e][sd] = sum(hammerEnds[e][sd])*1.0/len(hammerEnds[e][sd])
+				except:
+					hammerEnds[e][sd] = 0
+				try:
+					nonHammerEnds[e][sd] = sum(nonHammerEnds[e][sd])*1.0/len(nonHammerEnds[e][sd])
+				except:
+					nonHammerEnds[e][sd] = 0
+		cur.execute("INSERT INTO WBS VALUES(
+	#Connect To Database
 db = MySQLdb.connect(host="localhost", # your host, usually localhost
                      user="root", # your username
                       passwd="jikipol", # your password
@@ -332,6 +484,9 @@ cur = db.cursor()
 
 #compileNetScoring()
 #compileScoringFrequencies()
-compileEBE()
+#compileEBE()
+#compileWPOT()
+compileWinsBySituation()
+
 
 
