@@ -38,7 +38,7 @@ try {
 		//For Each Team that the player has played on, get its team stats
 		$allTeamStats = array();
 		for($i = 0; $i < count($team_ids); $i++) {
-			$teamStats = getTeamStats($team_ids[$i]["TeamID"]);
+			$teamStats = getTeamStats($team_ids[$i]["TeamID"], $con);
 			array_push($allTeamStats, $teamStats);
 		}
 		$teamStats = calibrateStats($allTeamStats);
@@ -60,7 +60,7 @@ catch(PDOException $e){
 /**
 Given a Team ID and returns an associative array with relevant stats
 Returns
-Array{numGames, wins, losses, ... , netScoringWith, netScoringWithout, playerNames[Position][First or Last Name], ... , EBEAvgScoringWith[], EBEAvgScoringWithout[], ScoringFrequencyWith[], ScoringFrequencyWithout[], WPOT[]} 
+Array{numGames, wins, losses, ... , netScoringWith, netScoringWithout, playerNames[Position][First or Last Name], ... , EBEAvgScoringWith[], EBEAvgScoringWithout[], ScoringFrequencyWith[], ScoringFrequencyWithout[], WPOT[] WBS[][]} 
 */
 function getTeamStats($team_id, $con) {
 	
@@ -100,7 +100,14 @@ function getTeamStats($team_id, $con) {
 	$WPOT = $getWPOT->fetchAll(PDO::FETCH_ASSOC);
 	
 	$teamStats = addWPOT($teamStats, $WPOT);
-
+	
+	$getWBS = $con->prepare("SELECT * FROM WBS WHERE TeamID = :ID ORDER BY EndNumber, ScoreDifferential, Hammer ASC");
+	$getWBS->bindParam(":ID", $team_id);
+	$getWBS->execute();
+	$WBS = $getWBS->fetchAll(PDO::FETCH_ASSOC);
+	
+	$teamStats = addWBS($teamStats, $WBS);
+	
 	return $teamStats;
 }
 /**
@@ -130,23 +137,32 @@ function addMainStats($teamStats, $mainStats){
 function addEBE($teamStats, $EBE){
 	$EBEAvgScoringWith = array();
 	$EBEAvgScoringWithout = array();
+	$EBEAvgScoringWithoutSamples = array();
+	$EBEAvgScoringWithSamples = array();
 	
 	for($i = 0; $i < count($EBE); $i++){
 		if($EBE[$i]["Hammer"] == 1) {
-			$EBEAvgScoringWith[$EBE[$i]["EndNumber"]] = $EBE[$i]["Average"];
+			$EBEAvgScoringWith[$EBE[$i]["EndNumber"] + 1] = $EBE[$i]["Average"];
+			$EBEAvgScoringWithSamples[$EBE[$i]["EndNumber"] + 1] = $EBE[$i]["Samples"];
+			
 		}
 		else {
-			$EBEAvgScoringWithout[$EBE[$i]["EndNumber"]] = $EBE[$i]["Average"];
+			$EBEAvgScoringWithout[$EBE[$i]["EndNumber"] + 1] = $EBE[$i]["Average"];
+			$EBEAvgScoringWithoutSamples[$EBE[$i]["EndNumber"] + 1] = $EBE[$i]["Samples"];
 		}
 	}
 	$teamStats["EBEAvgScoringWith"] = $EBEAvgScoringWith;
 	$teamStats["EBEAvgScoringWithout"] = $EBEAvgScoringWithout;
+	$teamStats["EBEAvgScoringWithoutSamples"] = $EBEAvgScoringWithoutSamples;
+	$teamStats["EBEAvgScoringWithSamples"] = $EBEAvgScoringWithSamples;
 	return $teamStats;
 }
 
 function addFrequencies($teamStats, $frequencies) {
 	$hammerFrequencies = array();
 	$nonHammerFrequencies = array();
+	$hammerSamples = array();
+	$nonHammerSamples = array();
 	
 	$h = -8;
 	$nh = -8;
@@ -154,16 +170,19 @@ function addFrequencies($teamStats, $frequencies) {
 	for($i = 0; $i < count($frequencies); $i++){
 		if ($frequencies[$i]["Hammer"] == True) {
 			$hammerFrequencies[$h] = $frequencies[$i]["rate"];
+			$hammerSamples[$h] = $frequencies[$i]["Samples"];
 			$h += 1;
 		}
 		else {
 			$nonHammerFrequencies[$h] = $frequencies[$i]["rate"];
+			$nonHammerSamples[$h] = $frequencies[$i]["Samples"];
 			$nh += 1;
 		}
 	}
 	$teamStats["hammerFrequencies"] = $hammerFrequencies;
 	$teamStats["nonHammerFrequencies"] = $nonHammerFrequencies;
-	
+	$teamStats["hammerFrequenciesSamples"] = $hammerSamples;
+	$teamStats["nonHammerFrequenciesSamples"] = $nonHammerSamples;
 	return $teamStats;
 }
 
@@ -189,12 +208,312 @@ function addWPOT($teamStats, $WPOT){
 	
 	for($i = 0; $i < count($WPOT); $i++) {
 		$WMonth[$WPOT[$i]["MonthNumber"]] = round($WPOT[$i]["WinningPercentage"]*100, 1);
+		$WSamples[$WPOT[$i]["MonthNumber"]] = $WPOT[$i]["Samples"];
 	}
 	
 	$teamStats["WPOT"] = $WMonth;
+	$teamStats["WPOTSamples"] = $WSamples;
 	return $teamStats;
 }
 
+function calibrateWPOT($teamStats, $allTeamStats) {
+	$WPOTAveragedData = array();
+	for ($monthNumber = 1; $monthNumber <= 12; $monthNumber++){	
+		$totalSamples = 0;
+		foreach($allTeamStats as $team) {
+			$totalSamples += $team["WPOTSamples"][$monthNumber];
+		}
+
+		$WPOTAveragedData[$monthNumber] = 0;
+		foreach($allTeamStats as $team) {
+			if ($totalSamples != 0){
+				$WPOTAveragedData[$monthNumber] += $team["WPOTSamples"][$monthNumber] / $totalSamples * $team["WPOT"][$monthNumber];
+			}
+			else {
+				$WPOTAveragedData[$monthNumber] += 0;
+			}
+		}
+	}
+	$teamStats["WPOT"] = $WPOTAveragedData;
+	return $teamStats;
+}
+
+/**
+Given Stats for multiple teams. 
+This function gives the stats a weighted average
+*/
+function calibrateStats($allTeamStats){
+	$teamStats = array();
+	$teamStats = getBasicStats($teamStats, $allTeamStats);
+	$teamStats = calibrateWPOT($teamStats, $allTeamStats);
+	$teamStats = calibrateScoringFrequencies($teamStats, $allTeamStats);
+	$teamStats = calibrateWBS($teamStats, $allTeamStats);
+	$teamStats = calibrateEBE($teamStats, $allTeamStats);
+	return $teamStats;
+}
+
+function getBasicStats($teamStats, $allTeamStats){
+	$totalGames = 0;
+	$totalLosses = 0;
+	$totalWins = 0;
+	$totalWinsWith = 0;
+	$totalWinsWithout = 0;
+	$totalLossesWith = 0;
+	$totalLossesWithout = 0;
+	for($i = 0; $i < count($allTeamStats); $i++){
+		$totalGames += $allTeamStats[$i]["numGames"];
+		$totalLosses += $allTeamStats[$i]["losses"];
+		$totalLossesWith += $allTeamStats[$i]["lossesWith"];
+		$totalLossesWithout += $allTeamStats[$i]["lossesWithout"];
+		$totalWins += $allTeamStats[$i]["wins"];
+		$totalWinsWith += $allTeamStats[$i]["winsWith"];
+		$totalWinsWithout += $allTeamStats[$i]["winsWithout"];
+	}
+	$teamStats["numGames"] = $totalGames;
+	$teamStats["losses"] = $totalLosses;
+	$teamStats["lossesWith"] = $totalLossesWith;
+	$teamStats["lossesWithout"] = $totalLossesWithout;
+	$teamStats["wins"] = $totalWins;
+	$teamStats["winsWith"] = $totalWinsWith;
+	$teamStats["winsWithout"] = $totalWinsWithout;
+	$teamStats["winPercentage"] = $totalWins / $totalGames;
+	$teamStats = getStats($teamStats, $allTeamStats, "pag");
+	$teamStats = getStats($teamStats, $allTeamStats, "pfg");
+	$teamStats = getStats($teamStats, $allTeamStats, "netScoringWith");
+	$teamStats = getStats($teamStats, $allTeamStats, "netScoringWithout");
+	$teamStats['eventsPlayed'] = 0;
+	$teamStats["eventsWon"] = 0;
+	
+	return $teamStats;
+}
+
+function getStats($teamStats, $allTeamStats, $string){
+	$pg = 0;
+
+	$totalGames = 0;
+	foreach($allTeamStats as $team) {
+		$totalGames += $team["numGames"];	
+	}
+	//Iterate through each team and get pfg or pag
+	foreach($allTeamStats as $team){
+		$pg += $team[$string] * $team["numGames"] / $totalGames;
+	}
+	$teamStats[$string] = $pg;
+	return $teamStats;
+}
+
+function calibrateScoringFrequencies($teamStats, $allTeamStats) {
+	$hammerFrequencies = array();
+	$nonHammerFrequencies = array();
+	$totalSamplesNonHammer = array();
+	$totalSamplesHammer = array();
+
+	for ($score = -8; $score <= 8; $score++){	
+		$totalSamplesHammer[$score] = 0;
+		$totalSamplesNonHammer[$score] = 0;
+		
+		foreach($allTeamStats as $team) {
+			
+			$totalSamplesHammer[$score] += $team["hammerFrequenciesSamples"][$score];
+			$totalSamplesNonHammer[$score] += $team["nonHammerFrequenciesSamples"][$score];
+		}
+
+		$hammerFrequencies[$score] = 0;
+		$nonHammerFrequencies[$score] = 0;
+		foreach($allTeamStats as $team) {
+			if ($totalSamplesHammer[$score] != 0){
+				$hammerFrequencies[$score] += $team["hammerFrequenciesSamples"][$score] / $totalSamplesHammer[$score] * $team["hammerFrequencies"][$score];
+			}
+			else {
+				$hammerFrequencies[$score] += 0;
+
+			}
+			if ($totalSamplesNonHammer[$score] != 0){
+				$nonHammerFrequencies[$score] += $team["nonHammerFrequenciesSamples"][$score] / $totalSamplesNonHammer[$score] * $team["nonHammerFrequencies"][$score];
+			}
+			else {
+				$nonHammerFrequencies[$score] += 0;
+			}
+		}
+	}
+	$teamStats["hammerFrequencies"] = $hammerFrequencies;
+	$teamStats["nonHammerFrequencies"] = $nonHammerFrequencies;
+	$teamStats["nonHammerFrequenciesSamples"] = $totalSamplesNonHammer;
+	$teamStats["hammerFrequenciesSamples"] = $totalSamplesHammer;
+	return $teamStats;
+}
+
+function calibrateEBE($teamStats, $allTeamStats) {
+	$hammerEBE = array();
+	$nonHammerEBE = array();
+	$totalSamplesNonHammer = array();
+	$totalSamplesHammer = array();
+	
+
+	for ($end = 1; $end <= 9; $end++){	
+		$totalSamplesHammer[$end] = 0;
+		$totalSamplesNonHammer[$end] = 0;
+		
+		foreach($allTeamStats as $team) {			
+			$totalSamplesHammer[$end] += $team["EBEAvgScoringWithSamples"][$end];
+			$totalSamplesNonHammer[$end] += $team["EBEAvgScoringWithoutSamples"][$end];
+		}
+
+		$hammerEBE[$end] = 0;
+		$nonHammerEBE[$end] = 0;
+		foreach($allTeamStats as $team) {
+			if ($totalSamplesHammer[$end] != 0){
+				$hammerEBE[$end] += $team["EBEAvgScoringWithSamples"][$end] / $totalSamplesHammer[$end] * $team["EBEAvgScoringWith"][$end];
+			}
+			else {
+				$hammerEBE[$end] += 0;
+			}
+			if ($totalSamplesNonHammer[$end] != 0){
+				$nonHammerEBE[$end] += $team["EBEAvgScoringWithoutSamples"][$end] / $totalSamplesNonHammer[$end] * $team["EBEAvgScoringWithout"][$end];
+			}
+			else {
+				$nonHammerEBE[$end] += 0;
+			}
+		}
+	}
+	$teamStats["EBEAvgScoringWith"] = $hammerEBE;
+	$teamStats["EBEAvgScoringWithout"] = $nonHammerEBE;
+	$teamStats["EBEAvgScoringWithoutSamples"] = $totalSamplesNonHammer;
+	$teamStats["EBEAvgScoringWithSamples"] = $totalSamplesHammer;
+	return $teamStats;
+}
+
+function calibrateWBS($teamStats, $allTeamStats){
+	$WBSHammer = array();
+	$WBSNonHammer = array();
+	$WBSHammerSamples = array();
+	$WBSNonHammerSamples = array();
+	
+	for($endNumber = 1; $endNumber<=12; $endNumber++){	
+		$WBSHammer[$endNumber] = array();
+		$WBSNonHammer[$endNumber] = array();
+		$WBSHammerSamples[$endNumber] = array();
+		$WBSNonHammerSamples[$endNumber] = array();
+		for ($sd = -4; $sd <= 4; $sd++) {
+			$WBSNonHammerSamples[$endNumber][$sd] = 0;
+			$WBSHammerSamples[$endNumber][$sd] = 0;
+			foreach($allTeamStats as $team) {			
+				$WBSHammerSamples[$endNumber][$sd] += $team["WBSHammerSamples"][$endNumber][$sd];
+				$WBSNonHammerSamples[$endNumber][$sd] += $team["WBSNonHammerSamples"][$endNumber][$sd];
+			}
+			
+			$WBSHammer[$endNumber][$sd] = 0;
+			$WBSNonHammer[$endNumber][$sd] = 0;
+			foreach($allTeamStats as $team) {
+				if ($WBSHammerSamples[$endNumber][$sd] != 0){
+					$WBSHammer[$endNumber][$sd] += $team["WBSHammerSamples"][$endNumber][$sd] / $WBSHammerSamples[$endNumber][$sd] * $team["WBSHammer"][$endNumber][$sd];
+				}
+				else {
+					$WBSHammer[$endNumber][$sd];
+
+				}
+				if ($WBSNonHammerSamples[$endNumber][$sd] != 0){
+					$WBSNonHammer[$endNumber][$sd] += $team["WBSNonHammerSamples"][$endNumber][$sd] / $WBSNonHammerSamples[$endNumber][$sd] * $team["WBSNonHammer"][$endNumber][$sd];
+				}
+				else {
+					$WBSNonHammer[$endNumber][$sd];
+				}
+			}
+		}
+	}
+
+
+	$teamStats["WBSHammer"] = $WBSHammer;
+	$teamStats["WBSNonHammer"] = $WBSNonHammer;
+	$teamStats["WBSNonHammerSamples"] = $WBSNonHammerSamples;
+	$teamStats["WBSHammerSamples"] = $WBSHammerSamples;
+	return $teamStats;
+}
+
+//Is given $array with data and weights it according to the # of games
+function calibrateArray($array, $weight){
+	$returnArray = initializeArrayToZero($array);
+	foreach($array as $key => $value) {
+		$returnArray[$key] += $weight * $value;
+	}
+	return $returnArray;
+}
+
+//Add Wins By Situation
+function addWBS($teamStats, $WBS){
+	$WBSHammer= array();
+	$WBSNonHammer = array();
+	$WBSNonHammerSamples = array();
+	$WBSHammerSamples = array();
+	
+	//Initialize Double Array  $WBSHammer[EndNumber][ScoreDifferential]
+	for($endNumber = 0; $endNumber<12; $endNumber++){	
+		$WBSHammer[$endNumber+1] = array();
+		$WBSNonHammer[$endNumber+1] = array();
+		$WBSNonHammerSamples[$endNumber+1] = array();
+		$WBSHammerSamples[$endNumber+1] = array();
+		for ($row = 0; $row < count($WBS); $row++) {
+			if ($WBS[$row]["Hammer"] == True && $WBS[$row]["EndNumber"] == $endNumber) {
+				$WBSHammer[$endNumber+1][$WBS[$row]["ScoreDifferential"]] = $WBS[$row]["WinningPercentage"];
+				$WBSHammerSamples[$endNumber+1][$WBS[$row]["ScoreDifferential"]] = $WBS[$row]["Samples"];
+			}
+			else if($WBS[$row]["Hammer"] == False && $WBS[$row]["EndNumber"] == $endNumber){
+				$WBSNonHammer[$endNumber+1][$WBS[$row]["ScoreDifferential"]] = $WBS[$row]["WinningPercentage"];
+				$WBSNonHammerSamples[$endNumber+1][$WBS[$row]["ScoreDifferential"]] = $WBS[$row]["Samples"];
+			}
+		}
+	}
+	$teamStats["WBSHammer"] = $WBSHammer;
+	$teamStats["WBSNonHammer"] = $WBSNonHammer;
+	$teamStats["WBSHammerSamples"] = $WBSHammerSamples;
+	$teamStats["WBSNonHammerSamples"] = $WBSNonHammerSamples;
+	return $teamStats;
+}
+
+
+function displayWBS($teamStats,$hammer){
+	$WBS = "";
+	if ($hammer == True){
+		$WBS = "WBSHammer";
+	}
+	else {
+		$WBS = "WBSNonHammer";
+	}
+	for($endNumber = 1; $endNumber<=9; $endNumber++){
+						echo '<div class="mini-tile end-playing-tile">
+							<p class="end-number">' . $endNumber . '</p>
+							</div>';
+						for($scoreDifferential = -4; $scoreDifferential <=4; $scoreDifferential++){
+							$odds = round($teamStats[$WBS][$endNumber][$scoreDifferential]*100,1);
+							if ($odds == -100) {
+								if ($endNumber <= 2 || $endNumber == 9) {
+									$odds = '';
+								}
+								else if ($endNumber <=4) {
+									$odds = 'N/A';
+								}
+								else if ($scoreDifferential < 0){
+									$odds = 0;
+								}
+								else {
+									$odds = 100;
+								}
+							}
+							echo '
+									<div class="mini-tile">
+										<p class="end-percentage">' . $odds . '</p>
+									</div>';
+						}
+					}
+}
+
+function initializeArrayToZero($array){
+	$zero = array();
+	foreach($array as $key => $value){
+		$zero[$key] = 0;
+	}
+	return $zero;
+}
 echo '
         <!-- pie chart  canvas element -->
 		<div class="row">
@@ -404,606 +723,69 @@ echo '
 						<p>End #</p>
 					</div>
 					<div class="mini-tile end-playing-tile">
-						<p>Up 4+</p>
-					</div>
-					<div class="mini-tile end-playing-tile">
-						<p>Up 3</p>
-					</div>
-					<div class="mini-tile end-playing-tile">
-						<p>Up 2</p>
-					</div>
-					<div class="mini-tile end-playing-tile">
-						<p>Up 1</p>
-					</div>
-					<div class="mini-tile end-playing-tile">
-						<p class="end-number">Tied</p>
-					</div>
-					<div class="mini-tile end-playing-tile">
-						<div>Down 1</div>
-					</div>
-					<div class="mini-tile end-playing-tile">
-						<div>Down 2</div>
+						<div>Down 4+</div>
 					</div>
 					<div class="mini-tile end-playing-tile">
 						<div>Down 3</div>
 					</div>
 					<div class="mini-tile end-playing-tile">
-						<div>Down 4</div>
+						<div>Down 2</div>
 					</div>
 					<div class="mini-tile end-playing-tile">
-						<p class="end-number">1</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">99</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">95</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">77</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">60</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">45</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">33</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">12</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">2</p>
+						<div>Down 1</div>
 					</div>
 					<div class="mini-tile end-playing-tile">
-						<p class="end-number">2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.1</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">4.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.3</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">6.5</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">7.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">8.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">9.1</p>
+						<p class="end-number">Tied</p>
 					</div>
 					<div class="mini-tile end-playing-tile">
-						<p class="end-number">3</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.1</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">4.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.3</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">6.5</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">7.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">8.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">9.1</p>
+						<p>Up 1</p>
 					</div>
 					<div class="mini-tile end-playing-tile">
-						<p class="end-number">4</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.1</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">4.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.3</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">6.5</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">7.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">8.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">9.1</p>
+						<p>Up 2</p>
 					</div>
 					<div class="mini-tile end-playing-tile">
-						<p class="end-number">5</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.1</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">4.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.3</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">6.5</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">7.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">8.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">9.1</p>
+						<p>Up 3</p>
 					</div>
 					<div class="mini-tile end-playing-tile">
-						<p class="end-number">6</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.1</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">4.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.3</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">6.5</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">7.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">8.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">9.1</p>
-					</div>
-					<div class="mini-tile end-playing-tile">
-						<p class="end-number">7</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.1</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">4.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.3</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">6.5</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">7.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">8.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">9.1</p>
-					</div>
-					<div class="mini-tile end-playing-tile">
-						<p class="end-number">8</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.1</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">4.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.3</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">6.5</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">7.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">8.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">9.1</p>
-					</div>
-					<div class="mini-tile end-playing-tile">
-						<p class="end-number">9</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.1</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">4.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.3</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">6.5</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">7.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">8.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">9.1</p>
-					</div>
+						<p>Up 4+</p>
+					</div>';
+					displayWBS($teamStats, True);
 					
-				</div>
+				echo '</div>
 				<div class="winning-percentage-tiles-container not-hammer-tiles">
 					<div class="mini-tile end-playing-tile">
 						<p>End #</p>
 					</div>
 					<div class="mini-tile end-playing-tile">
-						<p>Up 4+</p>
-					</div>
-					<div class="mini-tile end-playing-tile">
-						<p>Up 3</p>
-					</div>
-					<div class="mini-tile end-playing-tile">
-						<p>Up 2</p>
-					</div>
-					<div class="mini-tile end-playing-tile">
-						<p>Up 1</p>
-					</div>
-					<div class="mini-tile end-playing-tile">
-						<p class="end-number">Tied</p>
-					</div>
-					<div class="mini-tile end-playing-tile">
-						<div>Down 1</div>
-					</div>
-					<div class="mini-tile end-playing-tile">
-						<div>Down 2</div>
+						<div>Down 4+</div>
 					</div>
 					<div class="mini-tile end-playing-tile">
 						<div>Down 3</div>
 					</div>
 					<div class="mini-tile end-playing-tile">
-						<div>Down 4</div>
+						<div>Down 2</div>
 					</div>
 					<div class="mini-tile end-playing-tile">
-						<p class="end-number">1</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.1</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">4.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.3</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">6.5</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">7.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">8.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">9.1</p>
+						<div>Down 1</div>
 					</div>
 					<div class="mini-tile end-playing-tile">
-						<p class="end-number">2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.1</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">4.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.3</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">6.5</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">7.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">8.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">9.1</p>
+						<p class="end-number">Tied</p>
 					</div>
 					<div class="mini-tile end-playing-tile">
-						<p class="end-number">3</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.1</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">4.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.3</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">6.5</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">7.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">8.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">9.1</p>
+						<p>Up 1</p>
 					</div>
 					<div class="mini-tile end-playing-tile">
-						<p class="end-number">4</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.1</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">4.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.3</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">6.5</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">7.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">8.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">9.1</p>
+						<p>Up 2</p>
 					</div>
 					<div class="mini-tile end-playing-tile">
-						<p class="end-number">5</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.1</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">4.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.3</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">6.5</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">7.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">8.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">9.1</p>
+						<p>Up 3</p>
 					</div>
 					<div class="mini-tile end-playing-tile">
-						<p class="end-number">6</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.1</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">4.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.3</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">6.5</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">7.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">8.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">9.1</p>
-					</div>
-					<div class="mini-tile end-playing-tile">
-						<p class="end-number">7</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.1</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">4.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.3</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">6.5</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">7.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">8.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">9.1</p>
-					</div>
-					<div class="mini-tile end-playing-tile">
-						<p class="end-number">8</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.1</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">4.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.3</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">6.5</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">7.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">8.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">9.1</p>
-					</div>
-					<div class="mini-tile end-playing-tile">
-						<p class="end-number">9</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">3.1</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">4.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">5.3</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">6.5</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">7.0</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">8.2</p>
-					</div>
-					<div class="mini-tile">
-						<p class="end-percentage">9.1</p>
-					</div>
-				</div>
+						<p>Up 4+</p>
+					</div>';
+					displayWBS($teamStats, False);
+					
+				echo '</div>
 			</div>
 		</div>
 		
@@ -1019,15 +801,15 @@ echo '
                     strokeColor : "#ACC26D",
                     pointColor : "#2ecc71",
                     pointStrokeColor : "#9DB86D",
-                    data : [' . $teamStats["EBEAvgScoringWith"][0] . ','
-							. $teamStats["EBEAvgScoringWith"][1] . ','
+                    data : [' . $teamStats["EBEAvgScoringWith"][1] . ','
 							. $teamStats["EBEAvgScoringWith"][2] . ','
 							. $teamStats["EBEAvgScoringWith"][3] . ','
 							. $teamStats["EBEAvgScoringWith"][4] . ','
 							. $teamStats["EBEAvgScoringWith"][5] . ','
 							. $teamStats["EBEAvgScoringWith"][6] . ','
 							. $teamStats["EBEAvgScoringWith"][7] . ','
-							. $teamStats["EBEAvgScoringWith"][8] . ']
+							. $teamStats["EBEAvgScoringWith"][8] . ','
+							. $teamStats["EBEAvgScoringWith"][9] . ']
                 },
 				{
 					label: "Without Hammer",
@@ -1035,15 +817,15 @@ echo '
                     strokeColor : "#ACC26D",
                     pointColor : "#e74c3c",
                     pointStrokeColor : "#9DB86D",
-                    data : [' . $teamStats["EBEAvgScoringWithout"][0] . ','
-							  . $teamStats["EBEAvgScoringWithout"][1] . ','
+                    data : [' . $teamStats["EBEAvgScoringWithout"][1] . ','
 							  . $teamStats["EBEAvgScoringWithout"][2] . ','
 							  . $teamStats["EBEAvgScoringWithout"][3] . ','
 							  . $teamStats["EBEAvgScoringWithout"][4] . ','
 							  . $teamStats["EBEAvgScoringWithout"][5] . ','
 							  . $teamStats["EBEAvgScoringWithout"][6] . ','
 							  . $teamStats["EBEAvgScoringWithout"][7] . ','
-							  . $teamStats["EBEAvgScoringWithout"][8] . ']
+							  . $teamStats["EBEAvgScoringWithout"][8] . ','
+							  . $teamStats["EBEAvgScoringWithout"][9] . ']
                 }
             ]
             }

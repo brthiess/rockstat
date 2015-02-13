@@ -14,23 +14,17 @@ def isCurrentTeamHammerTeam(teamID, hammerTeamID, otherTeamID):
 
 def getScoringFrequencies(ends):
 	frequencies = {-8: 0, -7: 0, -6: 0, -5: 0, -4: 0, -3: 0, -2: 0, -1: 0, 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6:0, 7:0, 8:0}
+	numberOfSamples = {-8: 0, -7: 0, -6: 0, -5: 0, -4: 0, -3: 0, -2: 0, -1: 0, 0: 0, 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6:0, 7:0, 8:0}
 	if (len(ends) == 0):
 		return frequencies
 	for e in range(0, len(ends)):
 		frequencies[ends[e]] += 1.0
 	for f in range(-8, 9):
+		numberOfSamples[f] = frequencies[f]
 		frequencies[f] = frequencies[f]/len(ends)
-	return frequencies
+	return frequencies, numberOfSamples
 
 def compileScoringFrequencies():
-	cur.execute("DROP TABLE IF EXISTS ScoringFrequency")
-	cur.execute("CREATE TABLE ScoringFrequency (\
-	TeamID int not NULL,\
-	Hammer boolean,\
-	Score int,\
-	rate float,\
-	FOREIGN KEY (TeamID) REFERENCES Team(ID)\
-	)")
 	cur.execute("SELECT ID FROM TEAM")
 	teamIds = cur.fetchall()
 	#For Each Team:
@@ -91,14 +85,14 @@ def compileScoringFrequencies():
 		cur.execute("UPDATE Team SET NetScoringWith=" + str(netHammerAvg) + ", NetScoringWithout=" + str(netNonHammerAvg) + " WHERE ID=" + str(teamID))
 		#Get Frequencies:
 		print(teamID)
-		frequencies = getScoringFrequencies(hammerEnds)
+		frequencies, numberOfSamples = getScoringFrequencies(hammerEnds)
 		for i in range (-8,9):
 			cur.execute("INSERT INTO ScoringFrequency VALUES ( " +\
-			str(teamID) + ", true, " + str(i) + ", " + str(frequencies[i]) + ", -1)") 
-		frequencies = getScoringFrequencies(nonHammerEnds)
+			str(teamID) + ", true, " + str(i) + ", " + str(frequencies[i]) + ", " + str(numberOfSamples[i]) + ")") 
+		frequencies, numberOfSamples = getScoringFrequencies(nonHammerEnds)
 		for i in range (-8,9):
 			cur.execute("INSERT INTO ScoringFrequency VALUES ( " +\
-			str(teamID) + ", false, " + str(i) + ", " + str(frequencies[i]) + ", -1)") 
+			str(teamID) + ", false, " + str(i) + ", " + str(frequencies[i]) + ", " + str(numberOfSamples[i]) + ")") 
 	cur.execute("ALTER TABLE scoringfrequency ORDER BY Score, Hammer, Rate desc")
 	db.commit()
 	
@@ -291,9 +285,12 @@ def compileEBE():
 						nonHammerEnds[end].append(nonHammerTeamScore)
 		#Get Averages for each end
 		averageForEnd = []
+		#Get Number Of Samples for each
+		samplesForEnd = []
 		for h in range(0, len(hammerEnds)):		#Ends with Hammer
 			try:
 				averageForEnd.append(sum(hammerEnds[h])*1.0/len(hammerEnds[h]))
+				samplesForEnd.append(len(hammerEnds[h]))
 			except:
 				averageForEnd.append(0)
 		for endNumber in range(0, len(hammerEnds)):
@@ -301,12 +298,14 @@ def compileEBE():
 						str(teamID) + ", " + \
 						str(endNumber) + ", " +\
 						"True, " +\
-						str(averageForEnd[endNumber]) +\
-						")")
+						str(averageForEnd[endNumber]) + ", " +\
+						str(samplesForEnd[endNumber]) + ")")
 		averageForEnd = []
+		samplesForEnd = []
 		for h in range(0, len(nonHammerEnds)):		#Ends without Hammer
 			try: 
 				averageForEnd.append(sum(nonHammerEnds[h])*1.0/len(nonHammerEnds[h]))
+				samplesForEnd.append(len(nonHammerEnds[h]))
 			except:
 				averageForEnd.append(0)
 		for endNumber in range(0, len(nonHammerEnds)):
@@ -314,8 +313,8 @@ def compileEBE():
 						str(teamID) + ", " + \
 						str(endNumber) + ", " +\
 						"False, " +\
-						str(averageForEnd[endNumber]) +\
-						")")
+						str(averageForEnd[endNumber]) + ", " +\
+						str(samplesForEnd[endNumber]) + " )")
 						
 						
 	db.commit()
@@ -360,6 +359,7 @@ def compileWPOT():
 			cur.execute("INSERT INTO WPOT VALUES(" + str(teamID) +\
 						", " + str(winningPercentage) +\
 						", " + str(m) +\
+						", " + str(totalGames) +\
 						")")
 	db.commit()
 			
@@ -400,6 +400,7 @@ def compileWinsBySituation():
 			OPPONENT_TEAM = 3 - OUR_TEAM
 			#print("\n\n\nGame Ends: " + str(gameEnds))
 			for end in range(0, len(gameEnds)):					#Iterate through each end
+
 				#print("\nEnd Number: " + str(gameEnds[end][0]))
 				
 				if (teamWithHammerThisEnd == HAMMER_TEAM):
@@ -423,6 +424,8 @@ def compileWinsBySituation():
 							#print("Appended Win For Down 4 With Hammer")
 							hammerEnds[gameEnds[end][0]][-4].append(1)
 						else:
+							if (end == 2 and scoreDifferential == -4):
+								print(g[0])
 							#print("Appended Win For In Between With Hammer")
 							hammerEnds[gameEnds[end][0]][scoreDifferential].append(1)	
 						if (hammerTeamScore > 0):					#Switch the team who has hammer
@@ -457,36 +460,49 @@ def compileWinsBySituation():
 						elif (scoreDifferential < -4):
 							nonHammerEnds[gameEnds[end][0]][-4].append(0)
 						else:
-							#print("Appended Loss For " + str(scoreDifferential) +" With Hammer")
 							nonHammerEnds[gameEnds[end][0]][scoreDifferential].append(0)	
 						if (hammerTeamScore > 0):
 							teamWithHammerThisEnd = OUR_TEAM
 						scoreDifferential = scoreDifferential + nonHammerTeamScore - hammerTeamScore
 		for e in range(0,12):
 			for sd in range(-4,5):
+				if (teamID==110 and e == 2 and sd == -4):
 				try:
-					hammerEnds[e][sd] = sum(hammerEnds[e][sd])*1.0/len(hammerEnds[e][sd])
+					winningPercentageHammer = sum(hammerEnds[e][sd])*1.0/len(hammerEnds[e][sd])
 				except:
-					hammerEnds[e][sd] = 0
+					winningPercentageHammer = -1
 				try:
-					nonHammerEnds[e][sd] = sum(nonHammerEnds[e][sd])*1.0/len(nonHammerEnds[e][sd])
+					winningPercentageNonHammer = sum(nonHammerEnds[e][sd])*1.0/len(nonHammerEnds[e][sd])
 				except:
-					nonHammerEnds[e][sd] = 0
-		cur.execute("INSERT INTO WBS VALUES(
+					winningPercentageNonHammer = -1
+				cur.execute("INSERT INTO WBS VALUES(" + str(teamID) + ", " + str(e) + ", " + str(sd) + ", " +\
+							str(winningPercentageHammer) + ", true, " + str(len(hammerEnds[e][sd])) + ")")
+				cur.execute("INSERT INTO WBS VALUES(" + str(teamID) + ", " + str(e) + ", " + str(sd) + ", " +\
+							str(winningPercentageNonHammer) + ", false, " + str(len(nonHammerEnds[e][sd])) + ")")
+
+	db.commit()
 	#Connect To Database
 db = MySQLdb.connect(host="localhost", # your host, usually localhost
                      user="root", # your username
                       passwd="jikipol", # your password
                       db="rockstat") # name of the data base
 					  
+
 cur = db.cursor()
 
+def compileAllStats():
+	compileNetScoring()
+	compileScoringFrequencies()
+	compileEBE()
+	compileWPOT()
+	compileWinsBySituation()
 
-#compileNetScoring()
-#compileScoringFrequencies()
-#compileEBE()
-#compileWPOT()
-compileWinsBySituation()
+if __name__ == 'main':
+	compileNetScoring()
+	compileScoringFrequencies()
+	compileEBE()
+	compileWPOT()
+	compileWinsBySituation()
 
 
 

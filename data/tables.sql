@@ -44,6 +44,7 @@ TeamID int NOT NULL,
 EndNumber int,
 Hammer boolean,
 Average float,
+Samples int,
 FOREIGN KEY (TeamID) REFERENCES Team(ID)
 );
 
@@ -71,6 +72,7 @@ TeamID int not NULL,
 Hammer boolean,
 Score int,
 rate float,
+Samples int,
 FOREIGN KEY (TeamID) REFERENCES Team(ID)
 );
 
@@ -78,13 +80,16 @@ CREATE TABLE WPOT (
 TeamID int not NULL,
 WinningPercentage float,
 MonthNumber int,
+Samples int,
 FOREIGN KEY (TeamID) REFERENCES Team(ID)
 );
 
 CREATE TABLE WBS (
 TeamID int not NULL,
-EndNumber
-ScoreDifferential
-WinningPercentage
+EndNumber int,
+ScoreDifferential int,
+WinningPercentage float,
+Hammer boolean,
+Samples int,
 FOREIGN KEY (TeamID) REFERENCES Team(ID)
-)
+);

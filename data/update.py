@@ -1,11 +1,26 @@
 import MySQLdb
+import wctCrawler
+import sys
+import initDB
+import compileStats
 
+
+#Run Web Crawler to Update Stats
+if ('crawl' == sys.argv[1]):
+	updateGames()		#Crawl the web for new games
+
+	
+
+	
 db = MySQLdb.connect(host="localhost", # your host, usually localhost
                      user="root", # your username
                       passwd="jikipol", # your password
                       db="rockstat") # name of the data base
 					  
 cur = db.cursor()
+
+print("Initializing Database")
+initDB.initializeTables(cur)
 
 f = open('games.dat', 'r')	
 #Put files into an array
@@ -40,6 +55,8 @@ game_date=''
 event=''
 #Read data from text file and place it in sql tables
 for g in range(0, len(games_dat)):
+	if(g % 5000 == 0):
+		print("Games Analysed: " + str(g/26))
 	if ('_d' in games_dat[g]):
 		game_date=games_dat[g+1]
 	elif('_lh' in games_dat[g]):
@@ -345,3 +362,6 @@ for g in range(0, len(games_dat)):
 		hammer_linescore=[]
 		other_linescore=[]
 db.commit()
+
+print("Compiling Stats")
+compileStats.compileAllStats()		#After inserting all data into DB, compile all relevant stats
